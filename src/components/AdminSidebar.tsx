@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, BookOpen, NotebookPen, Trophy, Settings, GraduationCap } from "lucide-react";
+import { LayoutDashboard, BookOpen, NotebookPen, Trophy, Settings, GraduationCap, CalendarDays } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -14,11 +14,12 @@ import {
 
 const items = [
   { title: "Today Focus", url: "/", icon: LayoutDashboard },
-  { title: "Modules", url: "/", icon: BookOpen },
-  { title: "Vibrant Notes", url: "/", icon: NotebookPen },
-  { title: "Achievements", url: "/", icon: Trophy },
-  { title: "Settings", url: "/", icon: Settings },
-];
+  { title: "Modules", url: "/modules", icon: BookOpen },
+  { title: "Calendar", url: "/calendar", icon: CalendarDays },
+  { title: "Vibrant Notes", url: "/notes", icon: NotebookPen },
+  { title: "Achievements", url: "/achievements", icon: Trophy },
+  { title: "Settings", url: "/settings", icon: Settings },
+] as const;
 
 export function AdminSidebar() {
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
@@ -43,7 +44,7 @@ export function AdminSidebar() {
             <SidebarMenu>
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={currentPath === item.url && item.title === "Today Focus"}>
+                  <SidebarMenuButton asChild isActive={currentPath === item.url}>
                     <Link to={item.url} className="flex items-center gap-3">
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
