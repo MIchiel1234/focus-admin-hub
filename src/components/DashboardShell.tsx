@@ -4,9 +4,11 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { Toaster } from "@/components/ui/sonner";
 import { CalendarProvider } from "@/lib/calendar-store";
+import { StudyProvider } from "@/lib/study-store";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
+    <StudyProvider>
     <CalendarProvider>
       <SidebarProvider>
         <Toaster />
@@ -40,5 +42,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </div>
       </SidebarProvider>
     </CalendarProvider>
+    </StudyProvider>
   );
 }

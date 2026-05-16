@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, BookOpen, NotebookPen, Trophy, Settings, GraduationCap, CalendarDays } from "lucide-react";
+import { LayoutDashboard, BookOpen, NotebookPen, Trophy, Settings, GraduationCap, CalendarDays, Target } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +15,7 @@ import {
 const items = [
   { title: "Today Focus", url: "/", icon: LayoutDashboard },
   { title: "Modules", url: "/modules", icon: BookOpen },
+  { title: "Goals", url: "/goals", icon: Target },
   { title: "Calendar", url: "/calendar", icon: CalendarDays },
   { title: "Vibrant Notes", url: "/notes", icon: NotebookPen },
   { title: "Achievements", url: "/achievements", icon: Trophy },
