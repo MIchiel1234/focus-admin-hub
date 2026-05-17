@@ -11,7 +11,8 @@ FROM node:22-slim
 WORKDIR /app
 # Use 'http-server' instead of 'serve'
 RUN npm install -g http-server
-COPY --from=build /app/dist/client .
+# CHANGE: We are copying the CONTENTS of dist/client directly into the root
+COPY --from=build /app/dist/client/. .
 
 EXPOSE 8181
 
