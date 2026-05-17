@@ -5,14 +5,19 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 RUN npm run build
+# This line will show us in the logs if 'dist' actually exists
+RUN ls -la /app/dist
 
 # Stage 2: Serve
 FROM nginx:alpine
-# Force delete the default nginx html files first
+# Ensure the directory exists and is clean
 RUN rm -rf /usr/share/nginx/html/*
-# Copy your built files into the standard nginx folder
+# Copy from build stage
 COPY --from=build /app/dist /usr/share/nginx/html
-# Standard Nginx config for Single Page Apps (Vite/Lovable)
+# Set permissions so Nginx can read the files
+RUN chmod -R 755 /usr/share/nginx/html
+
+# Custom Nginx config
 RUN echo 'server { \
     listen 80; \
     location / { \
