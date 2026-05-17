@@ -8,16 +8,14 @@ RUN npm run build
 
 # Stage 2: Serve
 FROM nginx:alpine
-# Clean everything
+# Remove default Nginx files
 RUN rm -rf /usr/share/nginx/html/*
 
-# Copy the whole dist folder to a temp spot
-COPY --from=build /app/dist /tmp/dist
+# Copy ONLY the contents of dist/client into the root
+# The /. tells Docker to copy the files, not the folder itself
+COPY --from=build /app/dist/client/. /usr/share/nginx/html/
 
-# Manually move contents of client to the right place
-RUN cp -r /tmp/dist/client/* /usr/share/nginx/html/
-
-# Final Nginx Config
+# Vite/TanStack SPA Config
 RUN printf 'server {\n\
     listen 80;\n\
     root /usr/share/nginx/html;\n\
@@ -26,8 +24,6 @@ RUN printf 'server {\n\
         try_files $uri $uri/ /index.html;\n\
     }\n\
 }\n' > /etc/nginx/conf.d/default.conf
-
-RUN chmod -R 755 /usr/share/nginx/html
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
