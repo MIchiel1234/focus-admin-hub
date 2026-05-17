@@ -9,6 +9,8 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
+import { StudyProvider } from "@/lib/study-store";
+import { CalendarProvider } from "@/lib/calendar-store";
 
 function NotFoundComponent() {
   return (
