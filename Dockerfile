@@ -14,4 +14,4 @@ COPY --from=build /app/dist/client .
 
 # Move to 8181 to avoid the AMP panel
 EXPOSE 8181
-CMD ["serve", "-s", ".", "-l", "8181"]
+CMD ["serve", "-s", ".", "-l", "8181", "-a", "0.0.0.0"]
