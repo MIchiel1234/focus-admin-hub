@@ -12,7 +12,6 @@ import appCss from "../styles.css?url";
 import { StudyProvider } from "@/lib/study-store";
 import { CalendarProvider } from "@/lib/calendar-store";
 import { AuthProvider } from "@/lib/auth";
-import { AuthGate } from "@/components/AuthGate";
 
 function NotFoundComponent() {
   return (
@@ -107,13 +106,11 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <AuthGate>
-          <StudyProvider>
-            <CalendarProvider>
-              <Outlet />
-            </CalendarProvider>
-          </StudyProvider>
-        </AuthGate>
+        <StudyProvider>
+          <CalendarProvider>
+            <Outlet />
+          </CalendarProvider>
+        </StudyProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
