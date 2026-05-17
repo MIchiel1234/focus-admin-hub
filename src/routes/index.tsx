@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
 import { Flame, Sparkles } from "lucide-react";
 import { DashboardShell } from "@/components/DashboardShell";
 import { ModuleCard, type Module } from "@/components/ModuleCard";
+import { useStudy } from "@/lib/study-store";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -16,40 +16,29 @@ export const Route = createFileRoute("/")({
 });
 
 function Admin() {
-  const [isChapter5Done, setIsChapter5Done] = useState(false);
+  const { chapterViews, completeChapter, loading } = useStudy();
 
-  const modules: Module[] = useMemo(
-    () => [
-      {
-        id: "ch5",
-        code: "TAX3761",
-        chapter: "Chapter 5",
-        title: "Capital Gains Tax",
-        description: "Disposal events, base cost, exclusions and inclusion rates.",
-        progress: isChapter5Done ? 100 : 60,
-        locked: false,
-        done: isChapter5Done,
-      },
-      {
-        id: "ch6",
-        code: "TAX3761",
-        chapter: "Chapter 6",
-        title: "Trusts & Estate Duty",
-        description: "Conduit principle, attribution rules and estate duty computation.",
-        progress: 0,
-        locked: !isChapter5Done,
-        unlockHint: "Finish Chapter 5",
-      },
-    ],
-    [isChapter5Done]
-  );
+  // Today focus: first non-done chapter per module (unlocked first, otherwise next locked one).
+  const focus: typeof chapterViews = (() => {
+    const byModule = new Map<string, typeof chapterViews>();
+    for (const c of chapterViews) {
+      if (!byModule.has(c.moduleId)) byModule.set(c.moduleId, []);
+      byModule.get(c.moduleId)!.push(c);
+    }
+    const picks: typeof chapterViews = [];
+    for (const [, list] of byModule) {
+      const next = list.find((c) => !c.done);
+      if (next) picks.push(next);
+    }
+    return picks;
+  })();
 
-  const handleComplete = (id: string) => {
-    if (id === "ch5") {
-      setIsChapter5Done(true);
-      toast.success("Chapter 6 Unlocked! 🚀", {
-        description: "Vibrant mode activated. Keep the streak going.",
-      });
+  const handleComplete = async (id: string) => {
+    try {
+      await completeChapter(id);
+      toast.success("Chapter complete — next one unlocked 🚀");
+    } catch (e) {
+      toast.error((e as Error).message);
     }
   };
 
@@ -58,54 +47,49 @@ function Admin() {
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground">
-            <Flame className="h-3 w-3 text-vibrant-from" /> 7-day streak
+            <Flame className="h-3 w-3 text-vibrant-from" /> Keep the streak alive
           </p>
           <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
             <span className="text-vibrant">Today Focus</span>
           </h1>
           <p className="mt-2 max-w-xl text-muted-foreground">
-            Two chapters queued. Finish what's lit — the next one unlocks the moment you do.
+            Your next chapter for each module. Finish one and the following unlocks instantly.
           </p>
         </div>
       </div>
 
-      <div
-        className={`mb-6 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm transition-all ${
-          isChapter5Done
-            ? "border-transparent bg-vibrant/10 text-foreground"
-            : "border-border bg-card text-muted-foreground"
-        }`}
-      >
-        <Sparkles className={`h-4 w-4 ${isChapter5Done ? "text-vibrant-from" : "text-muted-foreground"}`} />
-        {isChapter5Done ? (
-          <span>
-            <span className="font-medium text-foreground">Chapter 6 Unlocked! 🚀</span> Vibrant mode is on.
-          </span>
-        ) : (
-          <span>
-            <span className="font-medium text-foreground">Complete Ch 5</span> to unlock Chapter 6.
-          </span>
-        )}
-      </div>
-
-      <section className="mb-10">
-        <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-muted-foreground">Modules</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          {modules.map((m) => (
-            <ModuleCard key={m.id} module={m} onComplete={handleComplete} />
-          ))}
+      {loading ? (
+        <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+          Loading your modules…
         </div>
-        {isChapter5Done && (
-          <div className="mt-4 text-center">
-            <button
-              onClick={() => setIsChapter5Done(false)}
-              className="text-xs text-muted-foreground underline-offset-4 hover:underline"
-            >
-              Reset demo
-            </button>
+      ) : focus.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border p-12 text-center">
+          <Sparkles className="mx-auto h-10 w-10 text-muted-foreground" />
+          <p className="mt-3 text-sm text-muted-foreground">
+            No chapters yet — head to <span className="font-medium">Modules</span> to add one, or run the seed SQL.
+          </p>
+        </div>
+      ) : (
+        <section className="mb-10">
+          <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-muted-foreground">Next up</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {focus.map((c) => {
+              const card: Module = {
+                id: c.id,
+                code: c.moduleCode,
+                chapter: `Chapter ${c.chapterNumber}`,
+                title: c.title,
+                description: c.description,
+                progress: c.progress,
+                locked: c.locked,
+                done: c.done,
+                unlockHint: c.unlockHint,
+              };
+              return <ModuleCard key={c.id} module={card} onComplete={handleComplete} />;
+            })}
           </div>
-        )}
-      </section>
+        </section>
+      )}
     </DashboardShell>
   );
 }
