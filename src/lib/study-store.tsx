@@ -1,94 +1,226 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { supabase } from "./supabase";
+import { useAuth } from "./auth";
 
-export interface Subject {
+// Schema alignment:
+//   SQL `modules`     -> a subject (e.g. TAX3761)
+//   SQL `chapters`    -> a chapter inside a module
+//   SQL `user_progress` -> per-user completion / progress
+//   SQL `goals`       -> user goals
+
+export interface DbModule {
   id: string;
-  code: string; // e.g. "TAX3761"
-  name: string; // e.g. "Taxation of Business Activities"
+  code: string;
+  title: string;
 }
 
-export interface StudyModule {
+export interface DbChapter {
   id: string;
-  subjectId: string;
-  chapter: string; // e.g. "Chapter 7"
+  module_id: string;
+  chapter_number: number;
   title: string;
-  description?: string;
-  progress: number; // 0-100
-  done?: boolean;
+  description: string | null;
+  is_locked: boolean;
 }
 
-export interface Goal {
+export interface UserProgressRow {
+  chapter_id: string;
+  is_completed: boolean;
+  current_progress_percent: number;
+}
+
+export interface DbGoal {
   id: string;
   title: string;
-  detail?: string;
-  dueDate?: string; // yyyy-mm-dd
+  is_done: boolean;
+  due_date: string | null;
+  created_at: string;
+}
+
+// Friendly view: a chapter joined with the user's progress + computed unlock.
+export interface ChapterView {
+  id: string;
+  moduleId: string;
+  moduleCode: string;
+  chapterNumber: number;
+  title: string;
+  description: string;
+  progress: number;
   done: boolean;
-  createdAt: number;
+  locked: boolean;
+  unlockHint?: string;
 }
 
 interface Ctx {
-  subjects: Subject[];
-  modules: StudyModule[];
-  goals: Goal[];
-  addSubject: (s: Omit<Subject, "id">) => Subject;
-  addModule: (m: Omit<StudyModule, "id">) => void;
-  updateModule: (id: string, patch: Partial<StudyModule>) => void;
-  removeModule: (id: string) => void;
-  addGoal: (g: Omit<Goal, "id" | "done" | "createdAt">) => void;
-  toggleGoal: (id: string) => void;
-  removeGoal: (id: string) => void;
+  loading: boolean;
+  modules: DbModule[];
+  chapters: DbChapter[];
+  chapterViews: ChapterView[];
+  goals: DbGoal[];
+  refresh: () => Promise<void>;
+  addModule: (m: { code: string; title: string }) => Promise<void>;
+  addChapter: (c: { module_id: string; chapter_number: number; title: string; description?: string }) => Promise<void>;
+  removeChapter: (id: string) => Promise<void>;
+  completeChapter: (chapter_id: string) => Promise<void>;
+  setChapterProgress: (chapter_id: string, percent: number) => Promise<void>;
+  addGoal: (g: { title: string; due_date?: string | null }) => Promise<void>;
+  toggleGoal: (id: string, next: boolean) => Promise<void>;
+  removeGoal: (id: string) => Promise<void>;
 }
 
 const StudyCtx = createContext<Ctx | null>(null);
-const KEY = "admin.study.v1";
-
-const defaults = {
-  subjects: [{ id: "tax3761", code: "TAX3761", name: "Taxation of Business Activities" }] as Subject[],
-  modules: [
-    { id: "ch5", subjectId: "tax3761", chapter: "Chapter 5", title: "Capital Gains Tax", description: "Disposal events, base cost, inclusion rates.", progress: 60 },
-    { id: "ch6", subjectId: "tax3761", chapter: "Chapter 6", title: "Trusts & Estate Duty", description: "Conduit principle, attribution, estate duty.", progress: 0 },
-  ] as StudyModule[],
-  goals: [] as Goal[],
-};
 
 export function StudyProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState(defaults);
+  const { user } = useAuth();
+  const [modules, setModules] = useState<DbModule[]>([]);
+  const [chapters, setChapters] = useState<DbChapter[]>([]);
+  const [progress, setProgress] = useState<UserProgressRow[]>([]);
+  const [goals, setGoals] = useState<DbGoal[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    const [m, c, p, g] = await Promise.all([
+      supabase.from("modules").select("id, code, title").order("code"),
+      supabase
+        .from("chapters")
+        .select("id, module_id, chapter_number, title, description, is_locked")
+        .order("chapter_number"),
+      user
+        ? supabase.from("user_progress").select("chapter_id, is_completed, current_progress_percent")
+        : Promise.resolve({ data: [] as UserProgressRow[], error: null }),
+      user
+        ? supabase
+            .from("goals")
+            .select("id, title, is_done, due_date, created_at")
+            .order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] as DbGoal[], error: null }),
+    ]);
+
+    setModules((m.data ?? []) as DbModule[]);
+    setChapters((c.data ?? []) as DbChapter[]);
+    setProgress((p.data ?? []) as UserProgressRow[]);
+    setGoals((g.data ?? []) as DbGoal[]);
+    setLoading(false);
+  }, [user]);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) setState({ ...defaults, ...JSON.parse(raw) });
-    } catch {}
-  }, []);
+    refresh();
+  }, [refresh]);
 
-  useEffect(() => {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
-  }, [state]);
+  // Compute chapter views with sequential unlock: ch 1 always open;
+  // others unlock when the previous chapter is completed by the user.
+  const chapterViews: ChapterView[] = (() => {
+    const progressByChapter = new Map(progress.map((p) => [p.chapter_id, p]));
+    const moduleByCode = new Map(modules.map((m) => [m.id, m]));
+    const sorted = [...chapters].sort(
+      (a, b) => a.module_id.localeCompare(b.module_id) || a.chapter_number - b.chapter_number
+    );
 
-  const ctx: Ctx = {
-    ...state,
-    addSubject: (s) => {
-      const subject: Subject = { ...s, id: crypto.randomUUID() };
-      setState((p) => ({ ...p, subjects: [...p.subjects, subject] }));
-      return subject;
+    return sorted.map((c) => {
+      const mod = moduleByCode.get(c.module_id);
+      const myProg = progressByChapter.get(c.id);
+      const prev = sorted.find(
+        (x) => x.module_id === c.module_id && x.chapter_number === c.chapter_number - 1
+      );
+      const prevDone = prev ? progressByChapter.get(prev.id)?.is_completed ?? false : true;
+      const unlocked = c.chapter_number === 1 || prevDone;
+
+      return {
+        id: c.id,
+        moduleId: c.module_id,
+        moduleCode: mod?.code ?? "",
+        chapterNumber: c.chapter_number,
+        title: c.title,
+        description: c.description ?? "",
+        progress: myProg?.current_progress_percent ?? 0,
+        done: myProg?.is_completed ?? false,
+        locked: !unlocked,
+        unlockHint: unlocked ? undefined : `Finish Ch ${c.chapter_number - 1}`,
+      };
+    });
+  })();
+
+  const value: Ctx = {
+    loading,
+    modules,
+    chapters,
+    chapterViews,
+    goals,
+    refresh,
+    addModule: async ({ code, title }) => {
+      const { error } = await supabase.from("modules").insert({ code, title });
+      if (error) throw error;
+      await refresh();
     },
-    addModule: (m) =>
-      setState((p) => ({ ...p, modules: [...p.modules, { ...m, id: crypto.randomUUID() }] })),
-    updateModule: (id, patch) =>
-      setState((p) => ({ ...p, modules: p.modules.map((m) => (m.id === id ? { ...m, ...patch } : m)) })),
-    removeModule: (id) =>
-      setState((p) => ({ ...p, modules: p.modules.filter((m) => m.id !== id) })),
-    addGoal: (g) =>
-      setState((p) => ({
-        ...p,
-        goals: [...p.goals, { ...g, id: crypto.randomUUID(), done: false, createdAt: Date.now() }],
-      })),
-    toggleGoal: (id) =>
-      setState((p) => ({ ...p, goals: p.goals.map((g) => (g.id === id ? { ...g, done: !g.done } : g)) })),
-    removeGoal: (id) =>
-      setState((p) => ({ ...p, goals: p.goals.filter((g) => g.id !== id) })),
+    addChapter: async (c) => {
+      const { error } = await supabase.from("chapters").insert({
+        module_id: c.module_id,
+        chapter_number: c.chapter_number,
+        title: c.title,
+        description: c.description ?? null,
+      });
+      if (error) throw error;
+      await refresh();
+    },
+    removeChapter: async (id) => {
+      const { error } = await supabase.from("chapters").delete().eq("id", id);
+      if (error) throw error;
+      await refresh();
+    },
+    completeChapter: async (chapter_id) => {
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase.from("user_progress").upsert(
+        {
+          user_id: user.id,
+          chapter_id,
+          is_completed: true,
+          current_progress_percent: 100,
+          completed_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,chapter_id" }
+      );
+      if (error) throw error;
+      await refresh();
+    },
+    setChapterProgress: async (chapter_id, percent) => {
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase.from("user_progress").upsert(
+        {
+          user_id: user.id,
+          chapter_id,
+          current_progress_percent: percent,
+          is_completed: percent >= 100,
+          completed_at: percent >= 100 ? new Date().toISOString() : null,
+        },
+        { onConflict: "user_id,chapter_id" }
+      );
+      if (error) throw error;
+      await refresh();
+    },
+    addGoal: async ({ title, due_date }) => {
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase.from("goals").insert({
+        user_id: user.id,
+        title,
+        due_date: due_date ?? null,
+      });
+      if (error) throw error;
+      await refresh();
+    },
+    toggleGoal: async (id, next) => {
+      const { error } = await supabase.from("goals").update({ is_done: next }).eq("id", id);
+      if (error) throw error;
+      await refresh();
+    },
+    removeGoal: async (id) => {
+      const { error } = await supabase.from("goals").delete().eq("id", id);
+      if (error) throw error;
+      await refresh();
+    },
   };
 
-  return <StudyCtx.Provider value={ctx}>{children}</StudyCtx.Provider>;
+  return <StudyCtx.Provider value={value}>{children}</StudyCtx.Provider>;
 }
 
 export function useStudy() {
