@@ -2,20 +2,22 @@
 FROM node:22-slim AS build
 WORKDIR /app
 COPY package*.json ./
-# We use Node 22 because your logs showed TanStack wants Node >=22
 RUN npm install
 COPY . .
 RUN npm run build
 
-# Stage 2: Serve with Nginx
+# Stage 2: Serve
 FROM nginx:alpine
-# 1. Clean the default directory
+# Clean everything
 RUN rm -rf /usr/share/nginx/html/*
 
-# 2. Copy from the 'dist/client' folder we saw in your logs
-COPY --from=build /app/dist/client/. /usr/share/nginx/html/
+# Copy the whole dist folder to a temp spot
+COPY --from=build /app/dist /tmp/dist
 
-# 3. Standard Vite/React Nginx config
+# Manually move contents of client to the right place
+RUN cp -r /tmp/dist/client/* /usr/share/nginx/html/
+
+# Final Nginx Config
 RUN printf 'server {\n\
     listen 80;\n\
     root /usr/share/nginx/html;\n\
@@ -25,7 +27,6 @@ RUN printf 'server {\n\
     }\n\
 }\n' > /etc/nginx/conf.d/default.conf
 
-# 4. Permissions
 RUN chmod -R 755 /usr/share/nginx/html
 
 EXPOSE 80
