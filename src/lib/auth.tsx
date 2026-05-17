@@ -7,6 +7,7 @@ interface AuthCtx {
   session: Session | null;
   loading: boolean;
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
+  signInWithGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -47,6 +48,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email,
         options: {
           emailRedirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+        },
+      });
+      return { error: error?.message ?? null };
+    },
+    signInWithGoogle: async () => {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
         },
       });
       return { error: error?.message ?? null };
