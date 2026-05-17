@@ -1,45 +1,32 @@
 # Stage 1: Build
-FROM node:20-slim AS build
+FROM node:22-slim AS build
 WORKDIR /app
 COPY package*.json ./
-# We use 'npm install' to handle the dependencies correctly
+# We use Node 22 because your logs showed TanStack wants Node >=22
 RUN npm install
 COPY . .
 RUN npm run build
 
-# Stage 2: Run
-FROM node:20-slim
-WORKDIR /app
-# Only copy the production output and necessary files
-COPY --from=build /app/.output ./.output
-COPY --from=build /app/package.json ./package.json
+# Stage 2: Serve with Nginx
+FROM nginx:alpine
+# 1. Clean the default directory
+RUN rm -rf /usr/share/nginx/html/*
 
-# TanStack Start / Nitro environment variables
-ENV NODE_ENV=production
-ENV PORT=3005
-ENV HOST=0.0.0.0
+# 2. Copy from the 'dist/client' folder we saw in your logs
+COPY --from=build /app/dist/client/. /usr/share/nginx/html/
 
-EXPOSE 3005
+# 3. Standard Vite/React Nginx config
+RUN printf 'server {\n\
+    listen 80;\n\
+    root /usr/share/nginx/html;\n\
+    index index.html;\n\
+    location / {\n\
+        try_files $uri $uri/ /index.html;\n\
+    }\n\
+}\n' > /etc/nginx/conf.d/default.conf
 
-# The actual entry point for TanStack Start production builds
-CMD ["node", ".output/server/index.mjs"]FROM node:20-slim
-WORKDIR /app
+# 4. Permissions
+RUN chmod -R 755 /usr/share/nginx/html
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
-
-COPY package*.json ./
-RUN npm install
-
-COPY . .
-RUN npm run build
-
-# We use 3005 to stay away from Coolify's 3000
-ENV PORT=3005
-ENV HOST=0.0.0.0
-ENV NODE_ENV=production
-
-EXPOSE 3005
-
-# This starts the Nitro server (the heart of TanStack Start)
-CMD ["node", ".output/server/index.mjs"]
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
