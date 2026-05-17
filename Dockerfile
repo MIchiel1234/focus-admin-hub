@@ -7,23 +7,17 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Serve
-FROM nginx:alpine
-# Remove default Nginx files
-RUN rm -rf /usr/share/nginx/html/*
+FROM node:22-slim
+WORKDIR /app
 
-# Copy ONLY the contents of dist/client into the root
-# The /. tells Docker to copy the files, not the folder itself
-COPY --from=build /app/dist/client/. /usr/share/nginx/html/
+# Install 'serve' - a better tool for modern apps
+RUN npm install -g serve
 
-# Vite/TanStack SPA Config
-RUN printf 'server {\n\
-    listen 80;\n\
-    root /usr/share/nginx/html;\n\
-    index index.html;\n\
-    location / {\n\
-        try_files $uri $uri/ /index.html;\n\
-    }\n\
-}\n' > /etc/nginx/conf.d/default.conf
+# Copy ONLY the built client files
+COPY --from=build /app/dist/client .
 
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Use Port 8080 to stay far away from Coolify (3000) and Nginx (80)
+EXPOSE 8080
+
+# Start the server with SPA routing support (-s)
+CMD ["serve", "-s", ".", "-l", "8080"]
