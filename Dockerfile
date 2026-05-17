@@ -9,9 +9,11 @@ RUN npm run build
 # Stage 2: Serve
 FROM node:22-slim
 WORKDIR /app
-RUN npm install -g serve
+# Use 'http-server' instead of 'serve'
+RUN npm install -g http-server
 COPY --from=build /app/dist/client .
 
-# Move to 8181 to avoid the AMP panel
 EXPOSE 8181
-CMD ["serve", "-s", ".", "-l", "8181"]
+
+# -p is port, -proxy is for SPA routing (redirects 404s to index.html)
+CMD ["http-server", ".", "-p", "8181", "--proxy", "http://localhost:8181?"]
