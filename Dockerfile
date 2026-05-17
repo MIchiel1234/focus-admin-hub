@@ -1,32 +1,21 @@
-# Stage 1: Build
-FROM node:20-slim AS build
+FROM node:20-slim
 WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+
 COPY package*.json ./
 RUN npm install
+
 COPY . .
 RUN npm run build
 
-# Stage 2: Serve
-FROM nginx:alpine
-# 1. Clean the default directory
-RUN rm -rf /usr/share/nginx/html/*
+# We use 3005 to stay away from Coolify's 3000
+ENV PORT=3005
+ENV HOST=0.0.0.0
+ENV NODE_ENV=production
 
-# 2. Copy the CLIENT files specifically (where your index.html lives)
-COPY --from=build /app/dist/client/. /usr/share/nginx/html/
+EXPOSE 3005
 
-# 3. Create a rock-solid config that forces the root to /usr/share/nginx/html
-RUN printf 'server {\n\
-    listen 80;\n\
-    server_name localhost;\n\
-    root /usr/share/nginx/html;\n\
-    index index.html;\n\
-    location / {\n\
-        try_files $uri $uri/ /index.html;\n\
-    }\n\
-}\n' > /etc/nginx/conf.d/default.conf
-
-# 4. Final permission sweep
-RUN chmod -R 755 /usr/share/nginx/html && chown -R nginx:nginx /usr/share/nginx/html
-
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# This starts the Nitro server (the heart of TanStack Start)
+CMD ["node", ".output/server/index.mjs"]
