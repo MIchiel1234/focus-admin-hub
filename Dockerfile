@@ -4,17 +4,22 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
+# This creates the .output folder
 RUN npm run build
 
-# Stage 2: Serve
+# Stage 2: Run the actual server
 FROM node:22-slim
 WORKDIR /app
-# Use 'http-server' instead of 'serve'
-RUN npm install -g http-server
-# CHANGE: We are copying the CONTENTS of dist/client directly into the root
-COPY --from=build /app/dist/client/. .
 
+# Copy the build output (the engine)
+COPY --from=build /app/.output ./.output
+COPY --from=build /app/package*.json ./
+
+# TanStack Start / Nitro usually puts the entry point here:
 EXPOSE 8181
+ENV PORT=8181
+ENV HOST=0.0.0.0
+ENV NODE_ENV=production
 
-# -p is port, -proxy is for SPA routing (redirects 404s to index.html)
-CMD ["http-server", ".", "-p", "8181", "--proxy", "http://localhost:8181?"]
+# Start the actual app engine
+CMD ["node", ".output/server/index.mjs"]
