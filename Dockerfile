@@ -5,19 +5,18 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 RUN npm run build
-# This line will show us in the logs if 'dist' actually exists
-RUN ls -la /app/dist
 
 # Stage 2: Serve
 FROM nginx:alpine
-# Ensure the directory exists and is clean
 RUN rm -rf /usr/share/nginx/html/*
-# Copy from build stage
-COPY --from=build /app/dist /usr/share/nginx/html
-# Set permissions so Nginx can read the files
-RUN chmod -R 755 /usr/share/nginx/html
 
-# Custom Nginx config
+# WE CHANGE THIS LINE: Copy from /app/dist/client instead of just /app/dist
+COPY --from=build /app/dist/client/. /usr/share/nginx/html/
+
+# Fix permissions
+RUN chmod -R 755 /usr/share/nginx/html && chown -R nginx:nginx /usr/share/nginx/html
+
+# Custom Nginx config to handle React/Vite routing
 RUN echo 'server { \
     listen 80; \
     location / { \
