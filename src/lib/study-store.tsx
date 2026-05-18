@@ -82,26 +82,42 @@ export function StudyProvider({ children }: { children: ReactNode }) {
 
   const ctx: Ctx = {
     ...state,
-    addSubject: (s) => {
-      const subject: Subject = { ...s, id: crypto.randomUUID() };
+    loading: loadingAuth || loadingStudy,
+    addSubject: async (s) => {
+      const subject: Subject = user ? await createSubject({ data: s }) : { ...s, id: crypto.randomUUID() };
       setState((p) => ({ ...p, subjects: [...p.subjects, subject] }));
       return subject;
     },
-    addModule: (m) =>
-      setState((p) => ({ ...p, modules: [...p.modules, { ...m, id: crypto.randomUUID() }] })),
-    updateModule: (id, patch) =>
-      setState((p) => ({ ...p, modules: p.modules.map((m) => (m.id === id ? { ...m, ...patch } : m)) })),
-    removeModule: (id) =>
-      setState((p) => ({ ...p, modules: p.modules.filter((m) => m.id !== id) })),
-    addGoal: (g) =>
+    addModule: async (m) => {
+      const module = user ? await createChapter({ data: m }) : { ...m, id: crypto.randomUUID() };
+      setState((p) => ({ ...p, modules: [...p.modules, module] }));
+    },
+    updateModule: async (id, patch) => {
+      setState((p) => ({ ...p, modules: p.modules.map((m) => (m.id === id ? { ...m, ...patch } : m)) }));
+      if (user && (typeof patch.done === "boolean" || typeof patch.progress === "number")) {
+        await updateChapterProgress({ data: { id, done: patch.done, progress: patch.progress } });
+      }
+    },
+    removeModule: async (id) => {
+      setState((p) => ({ ...p, modules: p.modules.filter((m) => m.id !== id) }));
+      if (user) await deleteChapter({ data: { id } });
+    },
+    addGoal: async (g) => {
+      const goal = user ? await createGoal({ data: { title: g.title, dueDate: g.dueDate } }) : { ...g, id: crypto.randomUUID(), done: false, createdAt: Date.now() };
       setState((p) => ({
         ...p,
-        goals: [...p.goals, { ...g, id: crypto.randomUUID(), done: false, createdAt: Date.now() }],
-      })),
-    toggleGoal: (id) =>
-      setState((p) => ({ ...p, goals: p.goals.map((g) => (g.id === id ? { ...g, done: !g.done } : g)) })),
-    removeGoal: (id) =>
-      setState((p) => ({ ...p, goals: p.goals.filter((g) => g.id !== id) })),
+        goals: [...p.goals, goal],
+      }));
+    },
+    toggleGoal: async (id) => {
+      const nextDone = !state.goals.find((g) => g.id === id)?.done;
+      setState((p) => ({ ...p, goals: p.goals.map((g) => (g.id === id ? { ...g, done: nextDone } : g)) }));
+      if (user) await setGoalDone({ data: { id, done: nextDone } });
+    },
+    removeGoal: async (id) => {
+      setState((p) => ({ ...p, goals: p.goals.filter((g) => g.id !== id) }));
+      if (user) await deleteGoal({ data: { id } });
+    },
   };
 
   return <StudyCtx.Provider value={ctx}>{children}</StudyCtx.Provider>;
