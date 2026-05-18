@@ -32,6 +32,8 @@ function redirectLovableAuthLinkToServer() {
   return true;
 }
 
+redirectLovableAuthLinkToServer();
+
 async function withAuthTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
