@@ -14,15 +14,11 @@ const Ctx = createContext<AuthCtx | null>(null);
 
 const AUTH_TIMEOUT_MS = 15000;
 const SELF_HOSTED_AUTH_ORIGIN = "http://debit-scanners.with.playit.plus:1149";
+const SELF_HOSTED_AUTH_REDIRECT = `${SELF_HOSTED_AUTH_ORIGIN}/modules`;
 
 function getAuthRedirectUrl() {
-  if (typeof window === "undefined") return `${SELF_HOSTED_AUTH_ORIGIN}/`;
-
-  if (window.location.hostname.endsWith("lovable.app")) {
-    return `${SELF_HOSTED_AUTH_ORIGIN}/`;
-  }
-
-  return `${window.location.origin}/`;
+  if (typeof window === "undefined") return SELF_HOSTED_AUTH_REDIRECT;
+  return SELF_HOSTED_AUTH_REDIRECT;
 }
 
 async function withAuthTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
