@@ -62,12 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signInWithMagicLink: async (email) => {
       try {
         const { error } = await withAuthTimeout(
-          supabase.auth.signInWithOtp({
-            email,
-            options: {
-              emailRedirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
-            },
-          }),
+          supabase.auth.signInWithOtp({ email }),
           "The sign-in request timed out. Please try again.",
         );
         return { error: error?.message ?? null };
