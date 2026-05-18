@@ -9,6 +9,9 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
+import { AuthProvider } from "@/lib/auth-store";
+import { CalendarProvider } from "@/lib/calendar-store";
+import { StudyProvider } from "@/lib/study-store";
 
 function NotFoundComponent() {
   return (
@@ -113,7 +116,13 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      <AuthProvider>
+        <StudyProvider>
+          <CalendarProvider>
+            <Outlet />
+          </CalendarProvider>
+        </StudyProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
