@@ -13,6 +13,7 @@ interface AuthCtx {
 const Ctx = createContext<AuthCtx | null>(null);
 
 const AUTH_TIMEOUT_MS = 15000;
+const MAGIC_LINK_REDIRECT_URL = "http://debit-scanners.with.playit.plus:1149/";
 
 async function withAuthTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -59,14 +60,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     signInWithMagicLink: async (email) => {
       try {
-        const redirectTo =
-          typeof window !== "undefined"
-            ? window.location.origin
-            : "http://debit-scanners.with.playit.plus:1149";
         const { error } = await withAuthTimeout(
           supabase.auth.signInWithOtp({
             email,
-            options: { emailRedirectTo: redirectTo },
+            options: { emailRedirectTo: MAGIC_LINK_REDIRECT_URL },
           }),
           "The sign-in request timed out. Please try again.",
         );
