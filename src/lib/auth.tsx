@@ -13,7 +13,17 @@ interface AuthCtx {
 const Ctx = createContext<AuthCtx | null>(null);
 
 const AUTH_TIMEOUT_MS = 15000;
-const AUTH_REDIRECT_URL = "http://debit-scanners.with.playit.plus:1149/";
+const SELF_HOSTED_AUTH_ORIGIN = "http://debit-scanners.with.playit.plus:1149";
+
+function getAuthRedirectUrl() {
+  if (typeof window === "undefined") return `${SELF_HOSTED_AUTH_ORIGIN}/`;
+
+  if (window.location.hostname.endsWith("lovable.app")) {
+    return `${SELF_HOSTED_AUTH_ORIGIN}/`;
+  }
+
+  return `${window.location.origin}/`;
+}
 
 async function withAuthTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -64,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { error } = await withAuthTimeout(
           supabase.auth.signInWithOtp({
             email,
-            options: { emailRedirectTo: AUTH_REDIRECT_URL },
+            options: { emailRedirectTo: getAuthRedirectUrl() },
           }),
           "The sign-in request timed out. Please try again.",
         );
