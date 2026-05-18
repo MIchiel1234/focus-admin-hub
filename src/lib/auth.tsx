@@ -1,14 +1,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
-import { lovable } from "@/integrations/lovable";
 
 interface AuthCtx {
   user: User | null;
   session: Session | null;
   loading: boolean;
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
-  signInWithGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -61,12 +59,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     signInWithMagicLink: async (email) => {
       try {
-        const emailRedirectTo =
-          typeof window !== "undefined" ? `${window.location.origin}/` : undefined;
         const { error } = await withAuthTimeout(
           supabase.auth.signInWithOtp({
             email,
-            options: emailRedirectTo ? { emailRedirectTo } : undefined,
           }),
           "The sign-in request timed out. Please try again.",
         );
@@ -74,12 +69,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         return { error: error instanceof Error ? error.message : "Could not send the magic link." };
       }
-    },
-    signInWithGoogle: async () => {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: typeof window !== "undefined" ? window.location.origin : undefined,
-      });
-      return { error: result.error ? String(result.error) : null };
     },
     signOut: async () => {
       await supabase.auth.signOut();
