@@ -177,7 +177,8 @@ export function StudyProvider({ children }: { children: ReactNode }) {
       await refresh();
     },
     removeChapter: async (id) => {
-      const { error } = await supabase.from("chapters").delete().eq("id", id);
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase.from("chapters").delete().eq("id", id).eq("user_id", user.id);
       if (error) throw error;
       await refresh();
     },
@@ -222,12 +223,14 @@ export function StudyProvider({ children }: { children: ReactNode }) {
       await refresh();
     },
     toggleGoal: async (id, next) => {
-      const { error } = await supabase.from("goals").update({ is_done: next }).eq("id", id);
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase.from("goals").update({ is_done: next }).eq("id", id).eq("user_id", user.id);
       if (error) throw error;
       await refresh();
     },
     removeGoal: async (id) => {
-      const { error } = await supabase.from("goals").delete().eq("id", id);
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase.from("goals").delete().eq("id", id).eq("user_id", user.id);
       if (error) throw error;
       await refresh();
     },
