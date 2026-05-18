@@ -80,21 +80,31 @@ export function StudyProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    if (!user) {
+      setModules([]); setChapters([]); setProgress([]); setGoals([]);
+      setLoading(false);
+      return;
+    }
     const [m, c, p, g] = await Promise.all([
-      supabase.from("modules").select("id, code, title").order("code"),
+      supabase
+        .from("modules")
+        .select("id, code, title")
+        .eq("user_id", user.id)
+        .order("code"),
       supabase
         .from("chapters")
         .select("id, module_id, chapter_number, title, description, is_locked")
+        .eq("user_id", user.id)
         .order("chapter_number"),
-      user
-        ? supabase.from("user_progress").select("chapter_id, is_completed, current_progress_percent")
-        : Promise.resolve({ data: [] as UserProgressRow[], error: null }),
-      user
-        ? supabase
-            .from("goals")
-            .select("id, title, is_done, due_date, created_at")
-            .order("created_at", { ascending: false })
-        : Promise.resolve({ data: [] as DbGoal[], error: null }),
+      supabase
+        .from("user_progress")
+        .select("chapter_id, is_completed, current_progress_percent")
+        .eq("user_id", user.id),
+      supabase
+        .from("goals")
+        .select("id, title, is_done, due_date, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false }),
     ]);
 
     setModules((m.data ?? []) as DbModule[]);
@@ -149,16 +159,19 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     goals,
     refresh,
     addModule: async ({ code, title }) => {
-      const { error } = await supabase.from("modules").insert({ code, title });
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase.from("modules").insert({ code, title, user_id: user.id });
       if (error) throw error;
       await refresh();
     },
     addChapter: async (c) => {
+      if (!user) throw new Error("Not signed in");
       const { error } = await supabase.from("chapters").insert({
         module_id: c.module_id,
         chapter_number: c.chapter_number,
         title: c.title,
         description: c.description ?? null,
+        user_id: user.id,
       });
       if (error) throw error;
       await refresh();
