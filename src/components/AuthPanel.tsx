@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth-store";
 
 export function AuthPanel() {
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const { signIn, signUp } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
@@ -27,10 +27,10 @@ export function AuthPanel() {
     <section className="mb-8 rounded-xl border border-border bg-card p-5 shadow-card">
       <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
         <div>
-          <h2 className="text-lg font-semibold">Sign in to save with Lovable Cloud</h2>
+          <h2 className="text-lg font-semibold">Sign in to save your work</h2>
           <p className="mt-1 text-sm text-muted-foreground">Your modules, goals, notes, and calendar stay available on every device.</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-[minmax(180px,1fr)_minmax(160px,1fr)_auto_auto] sm:items-end">
+        <div className="grid gap-3 sm:grid-cols-[minmax(180px,1fr)_minmax(160px,1fr)_auto] sm:items-end">
           <div className="grid gap-1.5">
             <Label htmlFor="auth-email">Email</Label>
             <Input id="auth-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
@@ -42,7 +42,6 @@ export function AuthPanel() {
           <Button onClick={submit} className="bg-vibrant text-primary-foreground border-0 shadow-vibrant">
             <LogIn className="h-4 w-4" /> {mode === "sign-in" ? "Sign in" : "Sign up"}
           </Button>
-          <Button variant="outline" onClick={signInWithGoogle}>Google</Button>
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
