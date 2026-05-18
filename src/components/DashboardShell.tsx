@@ -1,8 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { Bell, Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { Toaster } from "@/components/ui/sonner";
+import { NotificationsBell } from "@/components/NotificationsBell";
 
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
