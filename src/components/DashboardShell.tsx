@@ -1,8 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { Bell, Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { Toaster } from "@/components/ui/sonner";
+import { NotificationsBell } from "@/components/NotificationsBell";
 
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -26,9 +27,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 </Link>
                 <div className="flex items-center gap-3">
                   
-                  <button className="relative rounded-md p-2 text-muted-foreground hover:text-foreground hover:bg-accent/30">
-                    <Bell className="h-4 w-4" />
-                  </button>
+                  <NotificationsBell />
                   <div className="h-8 w-8 rounded-full bg-vibrant shadow-vibrant" />
                 </div>
               </div>
