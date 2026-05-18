@@ -5,6 +5,7 @@ import { DashboardShell } from "@/components/DashboardShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useStudy, type DbGoal } from "@/lib/study-store";
+import { useStudy } from "@/lib/study-store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -27,25 +28,23 @@ function GoalsPage() {
   const { goals, addGoal, toggleGoal, removeGoal } = useStudy();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
+  const [detail, setDetail] = useState("");
   const [dueDate, setDueDate] = useState("");
 
-  const submit = async () => {
+  const submit = () => {
     if (!title.trim()) return;
-    try {
-      await addGoal({
-        title: title.trim().slice(0, 120),
-        due_date: dueDate || null,
-      });
-      setTitle(""); setDueDate("");
-      setOpen(false);
-      toast.success("Goal set 🎯");
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
+    addGoal({
+      title: title.trim().slice(0, 120),
+      detail: detail.trim().slice(0, 500) || undefined,
+      dueDate: dueDate || undefined,
+    });
+    setTitle(""); setDetail(""); setDueDate("");
+    setOpen(false);
+    toast.success("Goal set 🎯");
   };
 
-  const active = goals.filter((g) => !g.is_done);
-  const done = goals.filter((g) => g.is_done);
+  const active = goals.filter((g) => !g.done);
+  const done = goals.filter((g) => g.done);
 
   return (
     <DashboardShell>
@@ -73,6 +72,10 @@ function GoalsPage() {
                 <Input id="g-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Finish TAX3761 Chapter 5" maxLength={120} />
               </div>
               <div>
+                <Label htmlFor="g-detail">Details (optional)</Label>
+                <Textarea id="g-detail" value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="What does done look like?" maxLength={500} />
+              </div>
+              <div>
                 <Label htmlFor="g-due">Due date (optional)</Label>
                 <Input id="g-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
               </div>
@@ -96,7 +99,7 @@ function GoalsPage() {
             <div className="space-y-2">
               {active.length === 0 && <p className="text-sm text-muted-foreground">All done. Add a new goal.</p>}
               {active.map((g) => (
-                <GoalRow key={g.id} g={g} onToggle={() => toggleGoal(g.id, true)} onRemove={() => removeGoal(g.id)} />
+                <GoalRow key={g.id} g={g} onToggle={() => toggleGoal(g.id)} onRemove={() => removeGoal(g.id)} />
               ))}
             </div>
           </section>
@@ -105,7 +108,7 @@ function GoalsPage() {
               <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-muted-foreground">Completed</h2>
               <div className="space-y-2">
                 {done.map((g) => (
-                  <GoalRow key={g.id} g={g} onToggle={() => toggleGoal(g.id, false)} onRemove={() => removeGoal(g.id)} />
+                  <GoalRow key={g.id} g={g} onToggle={() => toggleGoal(g.id)} onRemove={() => removeGoal(g.id)} />
                 ))}
               </div>
             </section>
@@ -116,18 +119,19 @@ function GoalsPage() {
   );
 }
 
-function GoalRow({ g, onToggle, onRemove }: { g: DbGoal; onToggle: () => void; onRemove: () => void }) {
+function GoalRow({ g, onToggle, onRemove }: { g: ReturnType<typeof useStudy>["goals"][number]; onToggle: () => void; onRemove: () => void }) {
   return (
     <div className={cn(
       "group flex items-start gap-3 rounded-lg border border-border bg-card p-4 transition-all hover:shadow-card",
-      g.is_done && "opacity-60"
+      g.done && "opacity-60"
     )}>
       <button onClick={onToggle} className="mt-0.5 shrink-0">
-        {g.is_done ? <CheckCircle2 className="h-5 w-5 text-vibrant-from" /> : <Circle className="h-5 w-5 text-muted-foreground" />}
+        {g.done ? <CheckCircle2 className="h-5 w-5 text-vibrant-from" /> : <Circle className="h-5 w-5 text-muted-foreground" />}
       </button>
       <div className="flex-1">
-        <p className={cn("font-medium", g.is_done && "line-through")}>{g.title}</p>
-        {g.due_date && <p className="mt-1 text-xs text-muted-foreground">Due {new Date(g.due_date).toLocaleDateString()}</p>}
+        <p className={cn("font-medium", g.done && "line-through")}>{g.title}</p>
+        {g.detail && <p className="mt-1 text-sm text-muted-foreground">{g.detail}</p>}
+        {g.dueDate && <p className="mt-1 text-xs text-muted-foreground">Due {new Date(g.dueDate).toLocaleDateString()}</p>}
       </div>
       <button onClick={onRemove} className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/20 hover:text-destructive group-hover:opacity-100">
         <Trash2 className="h-4 w-4" />

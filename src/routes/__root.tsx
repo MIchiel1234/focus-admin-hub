@@ -9,10 +9,6 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
-import { StudyProvider } from "@/lib/study-store";
-import { CalendarProvider } from "@/lib/calendar-store";
-import { AuthProvider } from "@/lib/auth";
-import { AuthGate } from "@/components/AuthGate";
 
 function NotFoundComponent() {
   return (
@@ -76,10 +72,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Study Admin" },
-      { name: "description", content: "Personal study dashboard" },
+      { title: "Lovable App" },
+      { name: "description", content: "Lovable Generated Project" },
+      { name: "author", content: "Lovable" },
+      { property: "og:title", content: "Lovable App" },
+      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "twitter:site", content: "@Lovable" },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      {
+        rel: "stylesheet",
+        href: appCss,
+      },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -106,15 +113,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <AuthGate>
-          <StudyProvider>
-            <CalendarProvider>
-              <Outlet />
-            </CalendarProvider>
-          </StudyProvider>
-        </AuthGate>
-      </AuthProvider>
+      <Outlet />
     </QueryClientProvider>
   );
 }

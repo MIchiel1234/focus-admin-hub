@@ -7,7 +7,6 @@ import { Trash2, Plus, CalendarDays } from "lucide-react";
 import { DashboardShell } from "@/components/DashboardShell";
 import { useCalendar, toKey } from "@/lib/calendar-store";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/calendar")({
   component: CalendarPage,
@@ -30,15 +29,10 @@ function CalendarInner() {
   const datesWithEvents = new Set(events.map((e) => e.date));
   const dayEvents = selected ? eventsForDate(selected) : [];
 
-  const handleAdd = async () => {
+  const handleAdd = () => {
     if (!selected || !title.trim()) return;
-    try {
-      await addEvent({ date: toKey(selected), title: title.trim(), color: "vibrant" });
-      setTitle("");
-      toast.success("Event added");
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
+    addEvent({ date: toKey(selected), title: title.trim(), color: "vibrant" });
+    setTitle("");
   };
 
   return (
@@ -117,7 +111,7 @@ function CalendarInner() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => removeEvent(e.id).catch((error) => toast.error((error as Error).message))}
+                    onClick={() => removeEvent(e.id)}
                     className="opacity-0 transition-opacity group-hover:opacity-100"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -144,7 +138,7 @@ function CalendarInner() {
                       <span className="rounded-md bg-vibrant/15 px-2 py-1 text-xs font-medium text-vibrant">{e.date}</span>
                       <span className="text-sm">{e.title}</span>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => removeEvent(e.id).catch((error) => toast.error((error as Error).message))}>
+                    <Button variant="ghost" size="icon" onClick={() => removeEvent(e.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </li>

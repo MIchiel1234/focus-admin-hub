@@ -31,52 +31,46 @@ export const Route = createFileRoute("/modules")({
 });
 
 function ModulesPage() {
-  const { modules, chapterViews, addModule, addChapter, removeChapter, completeChapter } = useStudy();
+  const { subjects, modules, addSubject, addModule, updateModule, removeModule } = useStudy();
+  const [openSubject, setOpenSubject] = useState(false);
   const [openModule, setOpenModule] = useState(false);
-  const [openChapter, setOpenChapter] = useState(false);
+
+  // Subject form
+  const [subjCode, setSubjCode] = useState("");
+  const [subjName, setSubjName] = useState("");
 
   // Module form
-  const [modCode, setModCode] = useState("");
+  const [modSubject, setModSubject] = useState<string>(subjects[0]?.id ?? "");
+  const [modChapter, setModChapter] = useState("");
   const [modTitle, setModTitle] = useState("");
-
-  // Chapter form
-  const [chModule, setChModule] = useState<string>(modules[0]?.id ?? "");
-  const [chNumber, setChNumber] = useState("");
-  const [chTitle, setChTitle] = useState("");
-  const [chDesc, setChDesc] = useState("");
+  const [modDesc, setModDesc] = useState("");
 
   const grouped = useMemo(() => {
-    return modules.map((m) => ({
-      module: m,
-      chapters: chapterViews.filter((c) => c.moduleId === m.id),
+    return subjects.map((s) => ({
+      subject: s,
+      mods: modules.filter((m) => m.subjectId === s.id),
     }));
-  }, [modules, chapterViews]);
+  }, [subjects, modules]);
 
-  const submitModule = async () => {
-    if (!modCode.trim() || !modTitle.trim()) return;
-    try {
-      await addModule({
-        code: modCode.trim().toUpperCase().slice(0, 20),
-        title: modTitle.trim().slice(0, 100),
-      });
-      setModCode(""); setModTitle(""); setOpenModule(false);
-      toast.success("Module added");
-    } catch (e) { toast.error((e as Error).message); }
+  const submitSubject = () => {
+    if (!subjCode.trim() || !subjName.trim()) return;
+    const s = addSubject({ code: subjCode.trim().toUpperCase().slice(0, 20), name: subjName.trim().slice(0, 100) });
+    setModSubject(s.id);
+    setSubjCode(""); setSubjName(""); setOpenSubject(false);
+    toast.success("Subject added");
   };
 
-  const submitChapter = async () => {
-    const num = parseInt(chNumber, 10);
-    if (!chModule || !num || !chTitle.trim()) return;
-    try {
-      await addChapter({
-        module_id: chModule,
-        chapter_number: num,
-        title: chTitle.trim().slice(0, 100),
-        description: chDesc.trim().slice(0, 300),
-      });
-      setChNumber(""); setChTitle(""); setChDesc(""); setOpenChapter(false);
-      toast.success("Chapter added");
-    } catch (e) { toast.error((e as Error).message); }
+  const submitModule = () => {
+    if (!modSubject || !modChapter.trim() || !modTitle.trim()) return;
+    addModule({
+      subjectId: modSubject,
+      chapter: modChapter.trim().slice(0, 50),
+      title: modTitle.trim().slice(0, 100),
+      description: modDesc.trim().slice(0, 300),
+      progress: 0,
+    });
+    setModChapter(""); setModTitle(""); setModDesc(""); setOpenModule(false);
+    toast.success("Module added");
   };
 
   return (
@@ -89,67 +83,67 @@ function ModulesPage() {
           <p className="mt-2 text-muted-foreground">All your subjects and chapters.</p>
         </div>
         <div className="flex gap-2">
-          <Dialog open={openModule} onOpenChange={setOpenModule}>
+          <Dialog open={openSubject} onOpenChange={setOpenSubject}>
             <DialogTrigger asChild>
-              <Button variant="outline"><Plus className="mr-2 h-4 w-4" /> Module</Button>
+              <Button variant="outline"><Plus className="mr-2 h-4 w-4" /> Subject</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add a module</DialogTitle>
-                <DialogDescription>Create a new module (e.g. TAX3761).</DialogDescription>
+                <DialogTitle>Add a subject</DialogTitle>
+                <DialogDescription>Create a new subject to group modules under.</DialogDescription>
               </DialogHeader>
               <div className="space-y-3">
                 <div>
                   <Label htmlFor="s-code">Code</Label>
-                  <Input id="s-code" value={modCode} onChange={(e) => setModCode(e.target.value)} placeholder="TAX3761" maxLength={20} />
+                  <Input id="s-code" value={subjCode} onChange={(e) => setSubjCode(e.target.value)} placeholder="TAX3761" maxLength={20} />
                 </div>
                 <div>
-                  <Label htmlFor="s-name">Title</Label>
-                  <Input id="s-name" value={modTitle} onChange={(e) => setModTitle(e.target.value)} placeholder="Taxation of Business Activities" maxLength={100} />
+                  <Label htmlFor="s-name">Name</Label>
+                  <Input id="s-name" value={subjName} onChange={(e) => setSubjName(e.target.value)} placeholder="Taxation of Business Activities" maxLength={100} />
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={submitModule} className="bg-vibrant text-primary-foreground border-0">Add module</Button>
+                <Button onClick={submitSubject} className="bg-vibrant text-primary-foreground border-0">Add subject</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
 
-          <Dialog open={openChapter} onOpenChange={(o) => { setOpenChapter(o); if (o && !chModule) setChModule(modules[0]?.id ?? ""); }}>
+          <Dialog open={openModule} onOpenChange={(o) => { setOpenModule(o); if (o && !modSubject) setModSubject(subjects[0]?.id ?? ""); }}>
             <DialogTrigger asChild>
-              <Button className="bg-vibrant text-primary-foreground border-0 shadow-vibrant"><Plus className="mr-2 h-4 w-4" /> Chapter</Button>
+              <Button className="bg-vibrant text-primary-foreground border-0 shadow-vibrant"><Plus className="mr-2 h-4 w-4" /> Module</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add a chapter</DialogTitle>
-                <DialogDescription>Add a chapter to a module.</DialogDescription>
+                <DialogTitle>Add a module</DialogTitle>
+                <DialogDescription>Add a chapter or unit to a subject.</DialogDescription>
               </DialogHeader>
               <div className="space-y-3">
                 <div>
-                  <Label>Module</Label>
-                  <Select value={chModule} onValueChange={setChModule}>
-                    <SelectTrigger><SelectValue placeholder="Pick a module" /></SelectTrigger>
+                  <Label>Subject</Label>
+                  <Select value={modSubject} onValueChange={setModSubject}>
+                    <SelectTrigger><SelectValue placeholder="Pick a subject" /></SelectTrigger>
                     <SelectContent>
-                      {modules.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>{m.code} — {m.title}</SelectItem>
+                      {subjects.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.code} — {s.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="m-num">Chapter number</Label>
-                  <Input id="m-num" type="number" min={1} value={chNumber} onChange={(e) => setChNumber(e.target.value)} placeholder="7" />
+                  <Label htmlFor="m-chapter">Chapter</Label>
+                  <Input id="m-chapter" value={modChapter} onChange={(e) => setModChapter(e.target.value)} placeholder="Chapter 7" maxLength={50} />
                 </div>
                 <div>
                   <Label htmlFor="m-title">Title</Label>
-                  <Input id="m-title" value={chTitle} onChange={(e) => setChTitle(e.target.value)} placeholder="VAT" maxLength={100} />
+                  <Input id="m-title" value={modTitle} onChange={(e) => setModTitle(e.target.value)} placeholder="VAT" maxLength={100} />
                 </div>
                 <div>
                   <Label htmlFor="m-desc">Description</Label>
-                  <Input id="m-desc" value={chDesc} onChange={(e) => setChDesc(e.target.value)} placeholder="Short summary" maxLength={300} />
+                  <Input id="m-desc" value={modDesc} onChange={(e) => setModDesc(e.target.value)} placeholder="Short summary" maxLength={300} />
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={submitChapter} disabled={!chModule} className="bg-vibrant text-primary-foreground border-0">Add chapter</Button>
+                <Button onClick={submitModule} disabled={!modSubject} className="bg-vibrant text-primary-foreground border-0">Add module</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -157,39 +151,38 @@ function ModulesPage() {
       </div>
 
       <div className="space-y-10">
-        {grouped.map(({ module: m, chapters }) => (
-          <section key={m.id}>
+        {grouped.map(({ subject, mods }) => (
+          <section key={subject.id}>
             <div className="mb-3 flex items-baseline justify-between">
               <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
-                {m.code} · <span className="text-foreground/80 normal-case tracking-normal">{m.title}</span>
+                {subject.code} · <span className="text-foreground/80 normal-case tracking-normal">{subject.name}</span>
               </h2>
-              <span className="text-xs text-muted-foreground">{chapters.length} chapter{chapters.length === 1 ? "" : "s"}</span>
+              <span className="text-xs text-muted-foreground">{mods.length} module{mods.length === 1 ? "" : "s"}</span>
             </div>
-            {chapters.length === 0 ? (
+            {mods.length === 0 ? (
               <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                No chapters yet. Click "Chapter" to add one.
+                No modules yet. Click "Module" to add one.
               </p>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
-                {chapters.map((c) => {
+                {mods.map((m) => {
                   const card: Module = {
-                    id: c.id,
-                    code: c.moduleCode,
-                    chapter: `Chapter ${c.chapterNumber}`,
-                    title: c.title,
-                    description: c.description,
-                    progress: c.progress,
-                    locked: c.locked,
-                    done: c.done,
-                    unlockHint: c.unlockHint,
+                    id: m.id,
+                    code: subject.code,
+                    chapter: m.chapter,
+                    title: m.title,
+                    description: m.description ?? "",
+                    progress: m.progress,
+                    locked: false,
+                    done: m.done,
                   };
                   return (
-                    <div key={c.id} className="relative group">
-                      <ModuleCard module={card} onComplete={() => completeChapter(c.id).catch((e) => toast.error((e as Error).message))} />
+                    <div key={m.id} className="relative group">
+                      <ModuleCard module={card} onComplete={() => updateModule(m.id, { done: true, progress: 100 })} />
                       <button
-                        onClick={() => removeChapter(c.id).catch((e) => toast.error((e as Error).message))}
+                        onClick={() => removeModule(m.id)}
                         className="absolute right-3 top-3 rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/20 hover:text-destructive group-hover:opacity-100"
-                        title="Delete chapter"
+                        title="Delete module"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

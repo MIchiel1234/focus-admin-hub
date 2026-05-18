@@ -1,21 +1,15 @@
-# Stage 1: Build the TanStack Start app
+# Stage 1: Build
 FROM node:22-slim AS build
 WORKDIR /app
-ENV NODE_OPTIONS=--max-old-space-size=2048
 COPY package*.json ./
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+RUN npm install
 COPY . .
 RUN npm run build
 
-# Stage 2: Run the built TanStack server with a production Node server
-FROM node:22-slim
-WORKDIR /app
-
-COPY --from=build /app ./
-
+# Stage 2: Serve static client with nginx
+FROM nginx:alpine
+COPY --from=build /app/dist/client /usr/share/nginx/html
+# SPA fallback so deep links work
+RUN printf 'server {\n  listen 8181;\n  root /usr/share/nginx/html;\n  index index.html;\n  location / { try_files $uri $uri/ /index.html; }\n}\n' > /etc/nginx/conf.d/default.conf
 EXPOSE 8181
-ENV PORT=8181
-ENV HOST=0.0.0.0
-ENV NODE_ENV=production
-
-CMD ["npm", "run", "start"]
+CMD ["nginx", "-g", "daemon off;"]

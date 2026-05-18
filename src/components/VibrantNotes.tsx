@@ -1,90 +1,41 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { NotebookPen, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth";
-import { toast } from "sonner";
 
 interface Note {
   id: string;
   title: string;
   body: string;
-  created_at: string;
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  date: string;
 }
 
 export function VibrantNotes() {
-  const { user } = useAuth();
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [notes, setNotes] = useState<Note[]>([
+    {
+      id: "1",
+      title: "Week 12 — Tax revision",
+      body: "Wrapped Chapter 5 problem set. Felt strong on capital gains rules.",
+      date: "Mon, May 12",
+    },
+  ]);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (!user) {
-      setNotes([]);
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("notes")
-        .select("id, title, body, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      if (cancelled) return;
-      if (error) toast.error("Failed to load notes");
-      else setNotes(data ?? []);
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
-
-  const addNote = async () => {
-    if (!user) {
-      toast.error("Please sign in to save notes");
-      return;
-    }
+  const addNote = () => {
     if (!title.trim() && !body.trim()) return;
-    setSaving(true);
-    const { data, error } = await supabase
-      .from("notes")
-      .insert({
-        user_id: user.id,
+    setNotes([
+      {
+        id: crypto.randomUUID(),
         title: title.trim() || "Untitled",
         body: body.trim(),
-      })
-      .select("id, title, body, created_at")
-      .single();
-    setSaving(false);
-    if (error || !data) {
-      toast.error("Failed to save note");
-      return;
-    }
-    setNotes((prev) => [data, ...prev]);
+        date: new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
+      },
+      ...notes,
+    ]);
     setTitle("");
     setBody("");
-  };
-
-  const removeNote = async (id: string) => {
-    if (!user) return;
-    const prev = notes;
-    setNotes(notes.filter((x) => x.id !== id));
-    const { error } = await supabase.from("notes").delete().eq("id", id).eq("user_id", user.id);
-    if (error) {
-      toast.error("Failed to delete note");
-      setNotes(prev);
-    }
   };
 
   return (
@@ -113,33 +64,25 @@ export function VibrantNotes() {
           className="min-h-[90px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
         />
         <div className="mt-2 flex justify-end">
-          <Button
-            onClick={addNote}
-            disabled={saving}
-            className="bg-vibrant text-primary-foreground border-0 shadow-vibrant hover:opacity-90"
-          >
-            <Plus className="mr-1 h-4 w-4" /> {saving ? "Saving…" : "Save note"}
+          <Button onClick={addNote} className="bg-vibrant text-primary-foreground border-0 shadow-vibrant hover:opacity-90">
+            <Plus className="mr-1 h-4 w-4" /> Save note
           </Button>
         </div>
       </div>
 
       <ul className="mt-5 space-y-3">
-        {loading && <li className="text-sm text-muted-foreground">Loading notes…</li>}
-        {!loading && notes.length === 0 && (
-          <li className="text-sm text-muted-foreground">No notes yet — write your first win above.</li>
-        )}
         {notes.map((n) => (
           <li key={n.id} className="group rounded-lg border border-border bg-background/40 p-4 transition-colors hover:border-primary/40">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="font-medium">{n.title}</h3>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{n.body}</p>
-                <p className="mt-2 text-xs text-muted-foreground/70">{formatDate(n.created_at)}</p>
+                <p className="mt-2 text-xs text-muted-foreground/70">{n.date}</p>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => removeNote(n.id)}
+                onClick={() => setNotes(notes.filter((x) => x.id !== n.id))}
                 className="opacity-0 transition-opacity group-hover:opacity-100"
               >
                 <Trash2 className="h-4 w-4" />
