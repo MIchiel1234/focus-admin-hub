@@ -7,15 +7,15 @@ RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 COPY . .
 RUN npm run build
 
-# Stage 2: Run the built server bundle
+# Stage 2: Run the built TanStack server with Vite preview
 FROM node:22-slim
 WORKDIR /app
 
-COPY --from=build /app/dist ./dist
+COPY --from=build /app ./
 
 EXPOSE 8181
 ENV PORT=8181
 ENV HOST=0.0.0.0
 ENV NODE_ENV=production
 
-CMD ["node", "dist/server/index.js"]
+CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "8181"]
