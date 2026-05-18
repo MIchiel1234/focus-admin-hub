@@ -13,26 +13,6 @@ interface AuthCtx {
 const Ctx = createContext<AuthCtx | null>(null);
 
 const AUTH_TIMEOUT_MS = 15000;
-const MAGIC_LINK_REDIRECT_URL = "http://debit-scanners.with.playit.plus:1149/";
-
-function redirectLovableAuthLinkToServer() {
-  if (typeof window === "undefined") return false;
-
-  const { hostname, search, hash } = window.location;
-  const isLovableHost = hostname.endsWith("lovable.app");
-  const hasAuthPayload =
-    search.includes("code=") ||
-    search.includes("token_hash=") ||
-    hash.includes("access_token=") ||
-    hash.includes("refresh_token=");
-
-  if (!isLovableHost || !hasAuthPayload) return false;
-
-  window.location.replace(`${MAGIC_LINK_REDIRECT_URL}${search}${hash}`);
-  return true;
-}
-
-redirectLovableAuthLinkToServer();
 
 async function withAuthTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -52,8 +32,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (redirectLovableAuthLinkToServer()) return;
-
     let mounted = true;
 
     // Set up listener BEFORE getSession (per Supabase best practice)
@@ -74,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe();
     };
   }, []);
+
 
   const value: AuthCtx = {
     user: session?.user ?? null,
