@@ -13,13 +13,6 @@ interface AuthCtx {
 const Ctx = createContext<AuthCtx | null>(null);
 
 const AUTH_TIMEOUT_MS = 15000;
-const SELF_HOSTED_AUTH_ORIGIN = "http://debit-scanners.with.playit.plus:1149";
-const SELF_HOSTED_AUTH_REDIRECT = `${SELF_HOSTED_AUTH_ORIGIN}/modules`;
-
-function getAuthRedirectUrl() {
-  if (typeof window === "undefined") return SELF_HOSTED_AUTH_REDIRECT;
-  return SELF_HOSTED_AUTH_REDIRECT;
-}
 
 async function withAuthTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -70,7 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { error } = await withAuthTimeout(
           supabase.auth.signInWithOtp({
             email,
-            options: { emailRedirectTo: getAuthRedirectUrl() },
           }),
           "The sign-in request timed out. Please try again.",
         );
