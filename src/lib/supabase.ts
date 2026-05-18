@@ -1,14 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
 
-const url = (import.meta.env.VITE_SUPABASE_URL as string) || "https://placeholder.supabase.co";
-const key = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || "placeholder-anon-key";
+// Hardcoded fallback so preview (where Vite env vars aren't set) still talks
+// to the real Supabase project. The anon key is a public/publishable key —
+// safe to ship in client code; RLS protects the data.
+const FALLBACK_URL = "https://fmtnjjpsipmtheyztlxx.supabase.co";
+const FALLBACK_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtdG5qanBzaXBtdGhleXp0bHh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5NTU0NDcsImV4cCI6MjA3NjUzMTQ0N30.kJEnnxJBNoBpemEa8I5SUTeYqgmS2VNcebPbHTtcZBE";
 
-if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-  // eslint-disable-next-line no-console
-  console.warn(
-    "[supabase] VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY missing — auth/data calls will fail until env vars are set at build time."
-  );
-}
+const url = (import.meta.env.VITE_SUPABASE_URL as string) || FALLBACK_URL;
+const key = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || FALLBACK_ANON_KEY;
 
 export const supabase = createClient(url, key, {
   auth: {
