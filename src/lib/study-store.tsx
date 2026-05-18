@@ -159,16 +159,19 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     goals,
     refresh,
     addModule: async ({ code, title }) => {
-      const { error } = await supabase.from("modules").insert({ code, title });
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase.from("modules").insert({ code, title, user_id: user.id });
       if (error) throw error;
       await refresh();
     },
     addChapter: async (c) => {
+      if (!user) throw new Error("Not signed in");
       const { error } = await supabase.from("chapters").insert({
         module_id: c.module_id,
         chapter_number: c.chapter_number,
         title: c.title,
         description: c.description ?? null,
+        user_id: user.id,
       });
       if (error) throw error;
       await refresh();
