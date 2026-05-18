@@ -51,10 +51,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) return { error: error.message };
       return { message: "Check your email to confirm your account, then sign in." };
     },
-    signInWithGoogle: async () => {
-      const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-      return result.error ? { error: result.error.message } : {};
-    },
     signOut: async () => {
       await supabase.auth.signOut();
     },
