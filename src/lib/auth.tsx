@@ -14,6 +14,21 @@ interface AuthCtx {
 
 const Ctx = createContext<AuthCtx | null>(null);
 
+const AUTH_TIMEOUT_MS = 15000;
+
+async function withAuthTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), AUTH_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,13 +60,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     loading,
     signInWithMagicLink: async (email) => {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
-        },
-      });
-      return { error: error?.message ?? null };
+      try {
+        const { error } = await withAuthTimeout(
+          supabase.auth.signInWithOtp({
+            email,
+            options: {
+              emailRedirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+            },
+          }),
+          "The sign-in request timed out. Please try again.",
+        );
+        return { error: error?.message ?? null };
+      } catch (error) {
+        return { error: error instanceof Error ? error.message : "Could not send the magic link." };
+      }
     },
     signInWithGoogle: async () => {
       const result = await lovable.auth.signInWithOAuth("google", {
