@@ -59,9 +59,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     signInWithMagicLink: async (email) => {
       try {
+        const redirectTo =
+          typeof window !== "undefined"
+            ? window.location.origin
+            : "http://debit-scanners.with.playit.plus:1149";
         const { error } = await withAuthTimeout(
           supabase.auth.signInWithOtp({
             email,
+            options: { emailRedirectTo: redirectTo },
           }),
           "The sign-in request timed out. Please try again.",
         );
