@@ -39,6 +39,7 @@ function LoginScreen() {
       return;
     }
     setSent(true);
+    toast.success("Magic link sent. Check your email.");
   };
 
   const google = async () => {
