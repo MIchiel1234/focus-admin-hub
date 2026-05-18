@@ -61,10 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signInWithMagicLink: async (email) => {
       try {
         const { error } = await withAuthTimeout(
-          supabase.auth.signInWithOtp({
-            email,
-            options: { emailRedirectTo: MAGIC_LINK_REDIRECT_URL },
-          }),
+          supabase.auth.signInWithOtp({ email }),
           "The sign-in request timed out. Please try again.",
         );
         return { error: error?.message ?? null };
@@ -72,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: error instanceof Error ? error.message : "Could not send the magic link." };
       }
     },
+
     signOut: async () => {
       await supabase.auth.signOut();
     },
