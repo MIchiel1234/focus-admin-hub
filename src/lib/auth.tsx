@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
+import { lovable } from "@/integrations/lovable";
 
 interface AuthCtx {
   user: User | null;
@@ -53,13 +54,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: error?.message ?? null };
     },
     signInWithGoogle: async () => {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
-        },
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: typeof window !== "undefined" ? window.location.origin : undefined,
       });
-      return { error: error?.message ?? null };
+      return { error: result.error ? String(result.error) : null };
     },
     signOut: async () => {
       await supabase.auth.signOut();
