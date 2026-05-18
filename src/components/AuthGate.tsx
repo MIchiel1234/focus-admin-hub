@@ -22,10 +22,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
 }
 
 function LoginScreen() {
-  const { signInWithMagicLink } = useAuth();
+  const { signInWithMagicLink, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +39,16 @@ function LoginScreen() {
       return;
     }
     setSent(true);
+  };
+
+  const google = async () => {
+    setGoogleBusy(true);
+    const { error } = await signInWithGoogle();
+    if (error) {
+      toast.error(error);
+      setGoogleBusy(false);
+    }
+    // on success, browser redirects to Google then back to the app
   };
 
   return (
