@@ -14,7 +14,12 @@ export function AuthPanel() {
 
   const submit = async () => {
     if (!email.trim() || password.length < 6) return;
-    const result = mode === "sign-in" ? await signIn(email.trim(), password) : await signUp(email.trim(), password);
+    if (mode === "sign-in") {
+      const result = await signIn(email.trim(), password);
+      setMessage(result.error ?? "");
+      return;
+    }
+    const result = await signUp(email.trim(), password);
     setMessage(result.error ?? result.message ?? "");
   };
 
