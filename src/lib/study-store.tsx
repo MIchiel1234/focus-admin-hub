@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useAuth } from "@/lib/auth-store";
+import { createChapter, createGoal, createSubject, deleteChapter, deleteGoal, getStudyData, setGoalDone, updateChapterProgress } from "@/lib/study.functions";
 
 export interface Subject {
   id: string;
@@ -29,13 +31,14 @@ interface Ctx {
   subjects: Subject[];
   modules: StudyModule[];
   goals: Goal[];
-  addSubject: (s: Omit<Subject, "id">) => Subject;
-  addModule: (m: Omit<StudyModule, "id">) => void;
-  updateModule: (id: string, patch: Partial<StudyModule>) => void;
-  removeModule: (id: string) => void;
-  addGoal: (g: Omit<Goal, "id" | "done" | "createdAt">) => void;
-  toggleGoal: (id: string) => void;
-  removeGoal: (id: string) => void;
+  loading: boolean;
+  addSubject: (s: Omit<Subject, "id">) => Promise<Subject>;
+  addModule: (m: Omit<StudyModule, "id">) => Promise<void>;
+  updateModule: (id: string, patch: Partial<StudyModule>) => Promise<void>;
+  removeModule: (id: string) => Promise<void>;
+  addGoal: (g: Omit<Goal, "id" | "done" | "createdAt">) => Promise<void>;
+  toggleGoal: (id: string) => Promise<void>;
+  removeGoal: (id: string) => Promise<void>;
 }
 
 const StudyCtx = createContext<Ctx | null>(null);
@@ -52,17 +55,30 @@ const defaults = {
 
 export function StudyProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState(defaults);
+  const [loadingStudy, setLoadingStudy] = useState(false);
+  const { user, loading: loadingAuth } = useAuth();
 
   useEffect(() => {
+    if (loadingAuth) return;
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) setState({ ...defaults, ...JSON.parse(raw) });
+      if (!user && raw) setState({ ...defaults, ...JSON.parse(raw) });
     } catch {}
-  }, []);
+  }, [loadingAuth, user]);
 
   useEffect(() => {
+    if (loadingAuth || user) return;
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
-  }, [state]);
+  }, [loadingAuth, state, user]);
+
+  useEffect(() => {
+    if (loadingAuth || !user) return;
+    setLoadingStudy(true);
+    getStudyData()
+      .then((data) => setState({ subjects: data.subjects, modules: data.modules, goals: data.goals }))
+      .catch(() => {})
+      .finally(() => setLoadingStudy(false));
+  }, [loadingAuth, user]);
 
   const ctx: Ctx = {
     ...state,
