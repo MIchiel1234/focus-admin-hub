@@ -1,8 +1,13 @@
 # Stage 1: Build (prerenders every route to static HTML)
 FROM node:22-slim AS build
 WORKDIR /app
+# Give Node enough heap for the Vite SSR + prerender pass — small containers
+# (≤1GB) OOM-kill the build silently otherwise.
+ENV NODE_OPTIONS=--max-old-space-size=2048
 COPY package*.json ./
-RUN npm install
+# Use `npm ci` when a lockfile exists for reproducible installs; fall back to
+# `npm install` if it's missing so the build still works.
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 COPY . .
 RUN npm run build
 
