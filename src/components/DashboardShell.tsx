@@ -1,15 +1,16 @@
 import { Link } from "@tanstack/react-router";
-import { Bell, Calendar as CalendarIcon } from "lucide-react";
+import { Bell, Calendar as CalendarIcon, LogOut } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { Toaster } from "@/components/ui/sonner";
-import { CalendarProvider } from "@/lib/calendar-store";
-import { StudyProvider } from "@/lib/study-store";
+import { Button } from "@/components/ui/button";
+import { AuthPanel } from "@/components/AuthPanel";
+import { useAuth } from "@/lib/auth-store";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
+  const { user, loading, signOut } = useAuth();
+
   return (
-    <StudyProvider>
-    <CalendarProvider>
       <SidebarProvider>
         <Toaster />
         <div className="flex min-h-screen w-full bg-background">
@@ -31,17 +32,24 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   <button className="relative rounded-md p-2 text-muted-foreground hover:text-foreground hover:bg-accent/30">
                     <Bell className="h-4 w-4" />
                   </button>
-                  <div className="h-8 w-8 rounded-full bg-vibrant shadow-vibrant" />
+                  {user ? (
+                    <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
+                      <LogOut className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-vibrant shadow-vibrant" />
+                  )}
                 </div>
               </div>
             </header>
             <main className="flex-1 px-6 py-8 lg:px-10">
-              <div className="mx-auto max-w-6xl">{children}</div>
+              <div className="mx-auto max-w-6xl">
+                {!loading && !user && <AuthPanel />}
+                {children}
+              </div>
             </main>
           </div>
         </div>
       </SidebarProvider>
-    </CalendarProvider>
-    </StudyProvider>
   );
 }

@@ -52,17 +52,17 @@ function ModulesPage() {
     }));
   }, [subjects, modules]);
 
-  const submitSubject = () => {
+  const submitSubject = async () => {
     if (!subjCode.trim() || !subjName.trim()) return;
-    const s = addSubject({ code: subjCode.trim().toUpperCase().slice(0, 20), name: subjName.trim().slice(0, 100) });
+    const s = await addSubject({ code: subjCode.trim().toUpperCase().slice(0, 20), name: subjName.trim().slice(0, 100) });
     setModSubject(s.id);
     setSubjCode(""); setSubjName(""); setOpenSubject(false);
     toast.success("Subject added");
   };
 
-  const submitModule = () => {
+  const submitModule = async () => {
     if (!modSubject || !modChapter.trim() || !modTitle.trim()) return;
-    addModule({
+    await addModule({
       subjectId: modSubject,
       chapter: modChapter.trim().slice(0, 50),
       title: modTitle.trim().slice(0, 100),

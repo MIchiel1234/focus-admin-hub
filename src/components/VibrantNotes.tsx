@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NotebookPen, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/lib/auth-store";
+import { createNote, deleteNote, getNotes } from "@/lib/notes.functions";
 
 interface Note {
   id: string;
@@ -12,6 +14,7 @@ interface Note {
 }
 
 export function VibrantNotes() {
+  const { user, loading } = useAuth();
   const [notes, setNotes] = useState<Note[]>([
     {
       id: "1",
@@ -23,19 +26,29 @@ export function VibrantNotes() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
 
-  const addNote = () => {
+  useEffect(() => {
+    if (loading || !user) return;
+    getNotes().then(setNotes).catch(() => {});
+  }, [loading, user]);
+
+  const addNote = async () => {
     if (!title.trim() && !body.trim()) return;
-    setNotes([
-      {
+    const nextNote = user
+      ? await createNote({ data: { title: title.trim() || "Untitled", body: body.trim() } })
+      : {
         id: crypto.randomUUID(),
         title: title.trim() || "Untitled",
         body: body.trim(),
         date: new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
-      },
-      ...notes,
-    ]);
+      };
+    setNotes([nextNote, ...notes]);
     setTitle("");
     setBody("");
+  };
+
+  const removeNote = async (id: string) => {
+    setNotes(notes.filter((x) => x.id !== id));
+    if (user) await deleteNote({ data: { id } });
   };
 
   return (
@@ -82,7 +95,7 @@ export function VibrantNotes() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setNotes(notes.filter((x) => x.id !== n.id))}
+                onClick={() => removeNote(n.id)}
                 className="opacity-0 transition-opacity group-hover:opacity-100"
               >
                 <Trash2 className="h-4 w-4" />
