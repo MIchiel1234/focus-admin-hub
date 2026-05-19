@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, BookOpen, NotebookPen, Trophy, Settings, GraduationCap, CalendarDays, Target } from "lucide-react";
+import { LayoutDashboard, BookOpen, NotebookPen, Trophy, Settings, GraduationCap, CalendarDays, Target, User } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -19,6 +19,7 @@ const items = [
   { title: "Calendar", url: "/calendar", icon: CalendarDays },
   { title: "Vibrant Notes", url: "/notes", icon: NotebookPen },
   { title: "Achievements", url: "/achievements", icon: Trophy },
+  { title: "Profile", url: "/profile", icon: User },
   { title: "Settings", url: "/settings", icon: Settings },
 ] as const;
 
