@@ -22,12 +22,8 @@ export const toKey = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 export function CalendarProvider({ children }: { children: ReactNode }) {
-  const today = new Date();
-  const seedDate = toKey(today);
   const { user, loading } = useAuth();
-  const [events, setEvents] = useState<CalendarEvent[]>([
-    { id: "seed-1", date: seedDate, title: "TAX3761 — Chapter 5 review", color: "vibrant" },
-  ]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
 
   useEffect(() => {
     if (loading || !user) return;
