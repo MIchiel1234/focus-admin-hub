@@ -1,124 +1,142 @@
-import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-const SubjectSchema = z.object({ code: z.string().min(1).max(20), name: z.string().min(1).max(100) });
-const ChapterSchema = z.object({ subjectId: z.string().uuid(), chapter: z.string().min(1).max(50), title: z.string().min(1).max(100), description: z.string().max(300).optional(), progress: z.number().min(0).max(100).optional() });
-const IdSchema = z.object({ id: z.string().uuid() });
-const UpdateChapterSchema = z.object({ id: z.string().uuid(), done: z.boolean().optional(), progress: z.number().min(0).max(100).optional() });
-const GoalSchema = z.object({ title: z.string().min(1).max(120), dueDate: z.string().max(10).optional() });
+import { directSupabase } from "@/lib/direct-supabase";
 
 const chapterNumberFrom = (chapter: string) => {
-  const match = chapter.match(/\d+/);
-  return match ? Number(match[0]) : 1;
+  const m = chapter.match(/\d+/);
+  return m ? Number(m[0]) : 1;
 };
 
-export const getStudyData = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    let { data: subjects, error: subjectsError } = await supabase.from("modules").select("id, code, title, created_at").order("created_at");
-    if (subjectsError) throw subjectsError;
+async function uid() {
+  const { data } = await directSupabase.auth.getUser();
+  if (!data.user) throw new Error("Not signed in");
+  return data.user.id;
+}
 
-    if (!subjects?.length) {
-      const { data: subject, error: subjectError } = await supabase
-        .from("modules")
-        .insert({ user_id: userId, code: "TAX3761", title: "Taxation of Business Activities" })
-        .select("id, code, title, created_at")
-        .single();
-      if (subjectError) throw subjectError;
+export const getStudyData = async () => {
+  const userId = await uid();
+  const sb = directSupabase;
 
-      const { data: chapters, error: chaptersError } = await supabase
-        .from("chapters")
-        .insert([
-          { user_id: userId, module_id: subject.id, chapter_number: 5, title: "Capital Gains Tax", description: "Disposal events, base cost, inclusion rates." },
-          { user_id: userId, module_id: subject.id, chapter_number: 6, title: "Trusts & Estate Duty", description: "Conduit principle, attribution, estate duty." },
-        ])
-        .select("id, chapter_number");
-      if (chaptersError) throw chaptersError;
+  let { data: subjects, error: subjectsError } = await sb
+    .from("modules")
+    .select("id, code, title, created_at")
+    .order("created_at");
+  if (subjectsError) throw subjectsError;
 
-      const chapterFive = chapters?.find((chapter) => chapter.chapter_number === 5);
-      if (chapterFive) {
-        await supabase.from("user_progress").insert({ user_id: userId, chapter_id: chapterFive.id, current_progress_percent: 60 });
-      }
-      subjects = [subject];
-    }
+  if (!subjects?.length) {
+    const { data: subject, error: subjectError } = await sb
+      .from("modules")
+      .insert({ user_id: userId, code: "TAX3761", title: "Taxation of Business Activities" })
+      .select("id, code, title, created_at")
+      .single();
+    if (subjectError) throw subjectError;
 
-    const [{ data: chapters, error: chaptersError }, { data: progress, error: progressError }, { data: goals, error: goalsError }] = await Promise.all([
-      supabase.from("chapters").select("id, module_id, chapter_number, title, description, created_at").order("chapter_number"),
-      supabase.from("user_progress").select("id, chapter_id, current_progress_percent, is_completed, completed_at"),
-      supabase.from("goals").select("id, title, due_date, is_done, created_at").order("created_at", { ascending: false }),
-    ]);
+    const { data: chapters, error: chaptersError } = await sb
+      .from("chapters")
+      .insert([
+        { user_id: userId, module_id: subject.id, chapter_number: 5, title: "Capital Gains Tax", description: "Disposal events, base cost, inclusion rates." },
+        { user_id: userId, module_id: subject.id, chapter_number: 6, title: "Trusts & Estate Duty", description: "Conduit principle, attribution, estate duty." },
+      ])
+      .select("id, chapter_number");
     if (chaptersError) throw chaptersError;
-    if (progressError) throw progressError;
-    if (goalsError) throw goalsError;
 
-    return {
-      subjects: (subjects ?? []).map((subject) => ({ id: subject.id, code: subject.code, name: subject.title })),
-      modules: (chapters ?? []).map((chapter) => {
-        const p = progress?.find((item) => item.chapter_id === chapter.id);
-        return {
-          id: chapter.id,
-          subjectId: chapter.module_id,
-          chapter: `Chapter ${chapter.chapter_number}`,
-          title: chapter.title,
-          description: chapter.description ?? "",
-          progress: p?.is_completed ? 100 : p?.current_progress_percent ?? 0,
-          done: p?.is_completed ?? false,
-        };
-      }),
-      goals: (goals ?? []).map((goal) => ({ id: goal.id, title: goal.title, dueDate: goal.due_date ?? undefined, done: goal.is_done, createdAt: new Date(goal.created_at).getTime() })),
-    };
-  });
+    const ch5 = chapters?.find((c: any) => c.chapter_number === 5);
+    if (ch5) {
+      await sb.from("user_progress").insert({ user_id: userId, chapter_id: ch5.id, current_progress_percent: 60 });
+    }
+    subjects = [subject];
+  }
 
-export const createSubject = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input) => SubjectSchema.parse(input)).handler(async ({ data, context }) => {
-  const { data: subject, error } = await context.supabase.from("modules").insert({ user_id: context.userId, code: data.code, title: data.name }).select("id, code, title").single();
+  const [{ data: chapters, error: chErr }, { data: progress, error: prErr }, { data: goals, error: glErr }] = await Promise.all([
+    sb.from("chapters").select("id, module_id, chapter_number, title, description, created_at").order("chapter_number"),
+    sb.from("user_progress").select("id, chapter_id, current_progress_percent, is_completed, completed_at"),
+    sb.from("goals").select("id, title, due_date, is_done, created_at").order("created_at", { ascending: false }),
+  ]);
+  if (chErr) throw chErr;
+  if (prErr) throw prErr;
+  if (glErr) throw glErr;
+
+  return {
+    subjects: (subjects ?? []).map((s: any) => ({ id: s.id, code: s.code, name: s.title })),
+    modules: (chapters ?? []).map((c: any) => {
+      const p = progress?.find((x: any) => x.chapter_id === c.id);
+      return {
+        id: c.id,
+        subjectId: c.module_id,
+        chapter: `Chapter ${c.chapter_number}`,
+        title: c.title,
+        description: c.description ?? "",
+        progress: p?.is_completed ? 100 : p?.current_progress_percent ?? 0,
+        done: p?.is_completed ?? false,
+      };
+    }),
+    goals: (goals ?? []).map((g: any) => ({ id: g.id, title: g.title, dueDate: g.due_date ?? undefined, done: g.is_done, createdAt: new Date(g.created_at).getTime() })),
+  };
+};
+
+export const createSubject = async ({ data }: { data: { code: string; name: string } }) => {
+  const user_id = await uid();
+  const { data: s, error } = await directSupabase
+    .from("modules")
+    .insert({ user_id, code: data.code, title: data.name })
+    .select("id, code, title")
+    .single();
   if (error) throw error;
-  return { id: subject.id, code: subject.code, name: subject.title };
-});
+  return { id: s.id, code: s.code, name: s.title };
+};
 
-export const createChapter = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input) => ChapterSchema.parse(input)).handler(async ({ data, context }) => {
-  const { data: chapter, error } = await context.supabase.from("chapters").insert({ user_id: context.userId, module_id: data.subjectId, chapter_number: chapterNumberFrom(data.chapter), title: data.title, description: data.description ?? "" }).select("id, module_id, chapter_number, title, description").single();
+export const createChapter = async ({ data }: { data: { subjectId: string; chapter: string; title: string; description?: string; progress?: number } }) => {
+  const user_id = await uid();
+  const { data: c, error } = await directSupabase
+    .from("chapters")
+    .insert({ user_id, module_id: data.subjectId, chapter_number: chapterNumberFrom(data.chapter), title: data.title, description: data.description ?? "" })
+    .select("id, module_id, chapter_number, title, description")
+    .single();
   if (error) throw error;
-  return { id: chapter.id, subjectId: chapter.module_id, chapter: `Chapter ${chapter.chapter_number}`, title: chapter.title, description: chapter.description ?? "", progress: data.progress ?? 0, done: false };
-});
+  return { id: c.id, subjectId: c.module_id, chapter: `Chapter ${c.chapter_number}`, title: c.title, description: c.description ?? "", progress: data.progress ?? 0, done: false };
+};
 
-export const updateChapterProgress = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input) => UpdateChapterSchema.parse(input)).handler(async ({ data, context }) => {
+export const updateChapterProgress = async ({ data }: { data: { id: string; done?: boolean; progress?: number } }) => {
+  const user_id = await uid();
+  const sb = directSupabase;
   const percent = data.done ? 100 : data.progress ?? 0;
-  const { data: existing, error: selectError } = await context.supabase.from("user_progress").select("id").eq("chapter_id", data.id).limit(1);
-  if (selectError) throw selectError;
+  const { data: existing, error: selErr } = await sb.from("user_progress").select("id").eq("chapter_id", data.id).limit(1);
+  if (selErr) throw selErr;
   const payload = { current_progress_percent: percent, is_completed: data.done ?? percent >= 100, completed_at: data.done ? new Date().toISOString() : null };
   if (existing?.[0]) {
-    const { error } = await context.supabase.from("user_progress").update(payload).eq("id", existing[0].id);
+    const { error } = await sb.from("user_progress").update(payload).eq("id", existing[0].id);
     if (error) throw error;
   } else {
-    const { error } = await context.supabase.from("user_progress").insert({ user_id: context.userId, chapter_id: data.id, ...payload });
+    const { error } = await sb.from("user_progress").insert({ user_id, chapter_id: data.id, ...payload });
     if (error) throw error;
   }
   return { id: data.id, progress: percent, done: payload.is_completed };
-});
+};
 
-export const deleteChapter = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input) => IdSchema.parse(input)).handler(async ({ data, context }) => {
-  await context.supabase.from("user_progress").delete().eq("chapter_id", data.id);
-  const { error } = await context.supabase.from("chapters").delete().eq("id", data.id);
+export const deleteChapter = async ({ data }: { data: { id: string } }) => {
+  await directSupabase.from("user_progress").delete().eq("chapter_id", data.id);
+  const { error } = await directSupabase.from("chapters").delete().eq("id", data.id);
   if (error) throw error;
   return { id: data.id };
-});
+};
 
-export const createGoal = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input) => GoalSchema.parse(input)).handler(async ({ data, context }) => {
-  const { data: goal, error } = await context.supabase.from("goals").insert({ user_id: context.userId, title: data.title, due_date: data.dueDate ?? null }).select("id, title, due_date, is_done, created_at").single();
+export const createGoal = async ({ data }: { data: { title: string; dueDate?: string } }) => {
+  const user_id = await uid();
+  const { data: g, error } = await directSupabase
+    .from("goals")
+    .insert({ user_id, title: data.title, due_date: data.dueDate ?? null })
+    .select("id, title, due_date, is_done, created_at")
+    .single();
   if (error) throw error;
-  return { id: goal.id, title: goal.title, dueDate: goal.due_date ?? undefined, done: goal.is_done, createdAt: new Date(goal.created_at).getTime() };
-});
+  return { id: g.id, title: g.title, dueDate: g.due_date ?? undefined, done: g.is_done, createdAt: new Date(g.created_at).getTime() };
+};
 
-export const setGoalDone = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input) => z.object({ id: z.string().uuid(), done: z.boolean() }).parse(input)).handler(async ({ data, context }) => {
-  const { error } = await context.supabase.from("goals").update({ is_done: data.done }).eq("id", data.id);
+export const setGoalDone = async ({ data }: { data: { id: string; done: boolean } }) => {
+  const { error } = await directSupabase.from("goals").update({ is_done: data.done }).eq("id", data.id);
   if (error) throw error;
   return data;
-});
+};
 
-export const deleteGoal = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input) => IdSchema.parse(input)).handler(async ({ data, context }) => {
-  const { error } = await context.supabase.from("goals").delete().eq("id", data.id);
+export const deleteGoal = async ({ data }: { data: { id: string } }) => {
+  const { error } = await directSupabase.from("goals").delete().eq("id", data.id);
   if (error) throw error;
   return { id: data.id };
-});
+};
