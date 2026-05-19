@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as NotesRouteImport } from './routes/notes'
 import { Route as ModulesRouteImport } from './routes/modules'
 import { Route as GoalsRouteImport } from './routes/goals'
@@ -20,6 +21,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotesRoute = NotesRouteImport.update({
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/goals': typeof GoalsRoute
   '/modules': typeof ModulesRoute
   '/notes': typeof NotesRoute
+  '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/goals': typeof GoalsRoute
   '/modules': typeof ModulesRoute
   '/notes': typeof NotesRoute
+  '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/goals': typeof GoalsRoute
   '/modules': typeof ModulesRoute
   '/notes': typeof NotesRoute
+  '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/goals'
     | '/modules'
     | '/notes'
+    | '/profile'
     | '/settings'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/goals'
     | '/modules'
     | '/notes'
+    | '/profile'
     | '/settings'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/goals'
     | '/modules'
     | '/notes'
+    | '/profile'
     | '/settings'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   GoalsRoute: typeof GoalsRoute
   ModulesRoute: typeof ModulesRoute
   NotesRoute: typeof NotesRoute
+  ProfileRoute: typeof ProfileRoute
   SettingsRoute: typeof SettingsRoute
 }
 
@@ -128,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notes': {
@@ -182,8 +202,19 @@ const rootRouteChildren: RootRouteChildren = {
   GoalsRoute: GoalsRoute,
   ModulesRoute: ModulesRoute,
   NotesRoute: NotesRoute,
+  ProfileRoute: ProfileRoute,
   SettingsRoute: SettingsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
