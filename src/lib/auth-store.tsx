@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { directSupabase } from "@/lib/direct-supabase";
 
 interface AuthContextValue {
   user: User | null;
@@ -20,13 +20,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
+    directSupabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
       setSession(data.session ?? null);
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: { subscription } } = directSupabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       setLoading(false);
     });
@@ -42,12 +42,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     loading,
     signIn: async (email, password) => {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await directSupabase.auth.signInWithPassword({ email, password });
       return error ? { error: error.message } : {};
     },
     signUp: async (email, password) => {
       const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/` : undefined;
-      const { error } = await supabase.auth.signUp({
+      const { error } = await directSupabase.auth.signUp({
         email,
         password,
         options: redirectTo ? { emailRedirectTo: redirectTo } : undefined,
@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { message: "Confirmation email sent. Check your inbox to verify your account." };
     },
     signOut: async () => {
-      await supabase.auth.signOut();
+      await directSupabase.auth.signOut();
     },
   }), [loading, session]);
 
