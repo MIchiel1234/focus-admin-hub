@@ -45,11 +45,8 @@ const StudyCtx = createContext<Ctx | null>(null);
 const KEY = "admin.study.v1";
 
 const defaults = {
-  subjects: [{ id: "tax3761", code: "TAX3761", name: "Taxation of Business Activities" }] as Subject[],
-  modules: [
-    { id: "ch5", subjectId: "tax3761", chapter: "Chapter 5", title: "Capital Gains Tax", description: "Disposal events, base cost, inclusion rates.", progress: 60 },
-    { id: "ch6", subjectId: "tax3761", chapter: "Chapter 6", title: "Trusts & Estate Duty", description: "Conduit principle, attribution, estate duty.", progress: 0 },
-  ] as StudyModule[],
+  subjects: [] as Subject[],
+  modules: [] as StudyModule[],
   goals: [] as Goal[],
 };
 
