@@ -1,10 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { Bell, Calendar as CalendarIcon, LogOut } from "lucide-react";
+import { Calendar as CalendarIcon, LogOut, User as UserIcon } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { AuthPanel } from "@/components/AuthPanel";
+import { NotificationsPopover } from "@/components/NotificationsPopover";
 import { useAuth } from "@/lib/auth-store";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
