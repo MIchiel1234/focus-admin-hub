@@ -1,29 +1,37 @@
-import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { directSupabase } from "@/lib/direct-supabase";
 
-const NoteSchema = z.object({ title: z.string().min(1).max(120), body: z.string().max(2000) });
-const IdSchema = z.object({ id: z.string().uuid() });
+const fmtDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
-export const getNotes = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
-  const { data, error } = await context.supabase.from("notes").select("id, title, body, created_at").order("created_at", { ascending: false });
+async function uid() {
+  const { data } = await directSupabase.auth.getUser();
+  if (!data.user) throw new Error("Not signed in");
+  return data.user.id;
+}
+
+export const getNotes = async () => {
+  await uid();
+  const { data, error } = await directSupabase
+    .from("notes")
+    .select("id, title, body, created_at")
+    .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []).map((note) => ({
-    id: note.id,
-    title: note.title,
-    body: note.body,
-    date: new Date(note.created_at).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
-  }));
-});
+  return (data ?? []).map((n: any) => ({ id: n.id, title: n.title, body: n.body, date: fmtDate(n.created_at) }));
+};
 
-export const createNote = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input) => NoteSchema.parse(input)).handler(async ({ data, context }) => {
-  const { data: note, error } = await context.supabase.from("notes").insert({ user_id: context.userId, title: data.title, body: data.body }).select("id, title, body, created_at").single();
+export const createNote = async ({ data }: { data: { title: string; body: string } }) => {
+  const user_id = await uid();
+  const { data: note, error } = await directSupabase
+    .from("notes")
+    .insert({ user_id, title: data.title, body: data.body })
+    .select("id, title, body, created_at")
+    .single();
   if (error) throw error;
-  return { id: note.id, title: note.title, body: note.body, date: new Date(note.created_at).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) };
-});
+  return { id: note.id, title: note.title, body: note.body, date: fmtDate(note.created_at) };
+};
 
-export const deleteNote = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input) => IdSchema.parse(input)).handler(async ({ data, context }) => {
-  const { error } = await context.supabase.from("notes").delete().eq("id", data.id);
+export const deleteNote = async ({ data }: { data: { id: string } }) => {
+  const { error } = await directSupabase.from("notes").delete().eq("id", data.id);
   if (error) throw error;
   return { id: data.id };
-});
+};
