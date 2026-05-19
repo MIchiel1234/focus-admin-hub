@@ -46,9 +46,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return error ? { error: error.message } : {};
     },
     signUp: async (email, password) => {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/` : undefined;
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: redirectTo ? { emailRedirectTo: redirectTo } : undefined,
+      });
       if (error) return { error: error.message };
-      return { message: "Check your email to confirm your account, then sign in." };
+      return { message: "Confirmation email sent. Check your inbox to verify your account." };
     },
     signOut: async () => {
       await supabase.auth.signOut();
