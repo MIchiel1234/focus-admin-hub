@@ -31,12 +31,21 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (loading || !user) return;
-    getCalendarEvents().then(setEvents).catch(() => {});
+    getCalendarEvents()
+      .then(setEvents)
+      .catch((err) => console.error("[calendar] load failed", err));
   }, [loading, user]);
 
   const addEvent: Ctx["addEvent"] = async (e) => {
-    const event = user ? await createCalendarEvent({ data: e }) : { ...e, id: crypto.randomUUID() };
-    setEvents((prev) => [...prev, event]);
+    try {
+      const event = user
+        ? await createCalendarEvent({ data: e })
+        : { ...e, id: crypto.randomUUID() };
+      setEvents((prev) => [...prev, event]);
+    } catch (err) {
+      console.error("[calendar] add failed", err);
+      alert("Could not save event: " + ((err as Error)?.message ?? "unknown error"));
+    }
   };
   const removeEvent: Ctx["removeEvent"] = async (id) => {
     setEvents((prev) => prev.filter((x) => x.id !== id));
