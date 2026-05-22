@@ -18,6 +18,7 @@ export const getStudyData = async () => {
   let { data: subjects, error: subjectsError } = await sb
     .from("modules")
     .select("id, code, title, created_at")
+    .eq("user_id", userId)
     .order("created_at");
   if (subjectsError) throw subjectsError;
 
@@ -46,9 +47,9 @@ export const getStudyData = async () => {
   }
 
   const [{ data: chapters, error: chErr }, { data: progress, error: prErr }, { data: goals, error: glErr }] = await Promise.all([
-    sb.from("chapters").select("id, module_id, chapter_number, title, description, created_at").order("chapter_number"),
-    sb.from("user_progress").select("id, chapter_id, current_progress_percent, is_completed, completed_at"),
-    sb.from("goals").select("id, title, due_date, is_done, created_at").order("created_at", { ascending: false }),
+    sb.from("chapters").select("id, module_id, chapter_number, title, description, created_at").eq("user_id", userId).order("chapter_number"),
+    sb.from("user_progress").select("id, chapter_id, current_progress_percent, is_completed, completed_at").eq("user_id", userId),
+    sb.from("goals").select("id, title, due_date, is_done, created_at").eq("user_id", userId).order("created_at", { ascending: false }),
   ]);
   if (chErr) throw chErr;
   if (prErr) throw prErr;
@@ -98,11 +99,11 @@ export const updateChapterProgress = async ({ data }: { data: { id: string; done
   const user_id = await uid();
   const sb = supabase;
   const percent = data.done ? 100 : data.progress ?? 0;
-  const { data: existing, error: selErr } = await sb.from("user_progress").select("id").eq("chapter_id", data.id).limit(1);
+  const { data: existing, error: selErr } = await sb.from("user_progress").select("id").eq("user_id", user_id).eq("chapter_id", data.id).limit(1);
   if (selErr) throw selErr;
   const payload = { current_progress_percent: percent, is_completed: data.done ?? percent >= 100, completed_at: data.done ? new Date().toISOString() : null };
   if (existing?.[0]) {
-    const { error } = await sb.from("user_progress").update(payload).eq("id", existing[0].id);
+    const { error } = await sb.from("user_progress").update(payload).eq("id", existing[0].id).eq("user_id", user_id);
     if (error) throw error;
   } else {
     const { error } = await sb.from("user_progress").insert({ user_id, chapter_id: data.id, ...payload });
