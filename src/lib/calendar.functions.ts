@@ -9,10 +9,11 @@ async function uid() {
 }
 
 export const getCalendarEvents = async () => {
-  await uid();
+  const user_id = await uid();
   const { data, error } = await supabase
     .from("calendar_events")
     .select("id, event_date, title, color")
+    .eq("user_id", user_id)
     .order("event_date");
   if (error) throw error;
   return (data ?? []).map((e: any) => ({ id: e.id, date: e.event_date, title: e.title, color: e.color as Color }));
@@ -30,7 +31,8 @@ export const createCalendarEvent = async ({ data }: { data: { date: string; titl
 };
 
 export const deleteCalendarEvent = async ({ data }: { data: { id: string } }) => {
-  const { error } = await supabase.from("calendar_events").delete().eq("id", data.id);
+  const user_id = await uid();
+  const { error } = await supabase.from("calendar_events").delete().eq("id", data.id).eq("user_id", user_id);
   if (error) throw error;
   return { id: data.id };
 };

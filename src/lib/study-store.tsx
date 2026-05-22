@@ -42,7 +42,6 @@ interface Ctx {
 }
 
 const StudyCtx = createContext<Ctx | null>(null);
-const KEY = "admin.study.v1";
 
 const defaults = {
   subjects: [] as Subject[],
@@ -57,25 +56,26 @@ export function StudyProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (loadingAuth) return;
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (!user && raw) setState({ ...defaults, ...JSON.parse(raw) });
-    } catch {}
-  }, [loadingAuth, user]);
-
-  useEffect(() => {
-    if (loadingAuth || user) return;
-    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
-  }, [loadingAuth, state, user]);
+    setState(defaults);
+  }, [loadingAuth, user?.id]);
 
   useEffect(() => {
     if (loadingAuth || !user) return;
+    let cancelled = false;
+    setState(defaults);
     setLoadingStudy(true);
     getStudyData()
-      .then((data) => setState({ subjects: data.subjects, modules: data.modules, goals: data.goals }))
+      .then((data) => {
+        if (!cancelled) setState({ subjects: data.subjects, modules: data.modules, goals: data.goals });
+      })
       .catch(() => {})
-      .finally(() => setLoadingStudy(false));
-  }, [loadingAuth, user]);
+      .finally(() => {
+        if (!cancelled) setLoadingStudy(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadingAuth, user?.id]);
 
   const ctx: Ctx = {
     ...state,
