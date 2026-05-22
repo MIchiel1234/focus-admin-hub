@@ -12,11 +12,11 @@ export const getCalendarEvents = async () => {
   const user_id = await uid();
   const { data, error } = await supabase
     .from("calendar_events")
-    .select("id, event_date, title, color")
+    .select("id, user_id, event_date, title, color")
     .eq("user_id", user_id)
     .order("event_date");
   if (error) throw error;
-  return (data ?? []).map((e: any) => ({ id: e.id, date: e.event_date, title: e.title, color: e.color as Color }));
+  return (data ?? []).filter((e: any) => e.user_id === user_id).map((e: any) => ({ id: e.id, date: e.event_date, title: e.title, color: e.color as Color }));
 };
 
 export const createCalendarEvent = async ({ data }: { data: { date: string; title: string; color?: Color } }) => {
