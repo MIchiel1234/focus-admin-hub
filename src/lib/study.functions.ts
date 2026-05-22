@@ -17,47 +17,23 @@ export const getStudyData = async () => {
 
   let { data: subjects, error: subjectsError } = await sb
     .from("modules")
-    .select("id, code, title, created_at")
+    .select("id, user_id, code, title, created_at")
     .eq("user_id", userId)
     .order("created_at");
   if (subjectsError) throw subjectsError;
 
-  if (!subjects?.length) {
-    const { data: subject, error: subjectError } = await sb
-      .from("modules")
-      .insert({ user_id: userId, code: "TAX3761", title: "Taxation of Business Activities" })
-      .select("id, code, title, created_at")
-      .single();
-    if (subjectError) throw subjectError;
-
-    const { data: chapters, error: chaptersError } = await sb
-      .from("chapters")
-      .insert([
-        { user_id: userId, module_id: subject.id, chapter_number: 5, title: "Capital Gains Tax", description: "Disposal events, base cost, inclusion rates." },
-        { user_id: userId, module_id: subject.id, chapter_number: 6, title: "Trusts & Estate Duty", description: "Conduit principle, attribution, estate duty." },
-      ])
-      .select("id, chapter_number");
-    if (chaptersError) throw chaptersError;
-
-    const ch5 = chapters?.find((c: any) => c.chapter_number === 5);
-    if (ch5) {
-      await sb.from("user_progress").insert({ user_id: userId, chapter_id: ch5.id, current_progress_percent: 60 });
-    }
-    subjects = [subject];
-  }
-
   const [{ data: chapters, error: chErr }, { data: progress, error: prErr }, { data: goals, error: glErr }] = await Promise.all([
-    sb.from("chapters").select("id, module_id, chapter_number, title, description, created_at").eq("user_id", userId).order("chapter_number"),
-    sb.from("user_progress").select("id, chapter_id, current_progress_percent, is_completed, completed_at").eq("user_id", userId),
-    sb.from("goals").select("id, title, due_date, is_done, created_at").eq("user_id", userId).order("created_at", { ascending: false }),
+    sb.from("chapters").select("id, user_id, module_id, chapter_number, title, description, created_at").eq("user_id", userId).order("chapter_number"),
+    sb.from("user_progress").select("id, user_id, chapter_id, current_progress_percent, is_completed, completed_at").eq("user_id", userId),
+    sb.from("goals").select("id, user_id, title, due_date, is_done, created_at").eq("user_id", userId).order("created_at", { ascending: false }),
   ]);
   if (chErr) throw chErr;
   if (prErr) throw prErr;
   if (glErr) throw glErr;
 
   return {
-    subjects: (subjects ?? []).map((s: any) => ({ id: s.id, code: s.code, name: s.title })),
-    modules: (chapters ?? []).map((c: any) => {
+    subjects: (subjects ?? []).filter((s: any) => s.user_id === userId).map((s: any) => ({ id: s.id, code: s.code, name: s.title })),
+    modules: (chapters ?? []).filter((c: any) => c.user_id === userId).map((c: any) => {
       const p = progress?.find((x: any) => x.chapter_id === c.id);
       return {
         id: c.id,
@@ -69,7 +45,7 @@ export const getStudyData = async () => {
         done: p?.is_completed ?? false,
       };
     }),
-    goals: (goals ?? []).map((g: any) => ({ id: g.id, title: g.title, dueDate: g.due_date ?? undefined, done: g.is_done, createdAt: new Date(g.created_at).getTime() })),
+    goals: (goals ?? []).filter((g: any) => g.user_id === userId).map((g: any) => ({ id: g.id, title: g.title, dueDate: g.due_date ?? undefined, done: g.is_done, createdAt: new Date(g.created_at).getTime() })),
   };
 };
 
