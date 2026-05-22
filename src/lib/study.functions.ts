@@ -113,8 +113,9 @@ export const updateChapterProgress = async ({ data }: { data: { id: string; done
 };
 
 export const deleteChapter = async ({ data }: { data: { id: string } }) => {
-  await supabase.from("user_progress").delete().eq("chapter_id", data.id);
-  const { error } = await supabase.from("chapters").delete().eq("id", data.id);
+  const user_id = await uid();
+  await supabase.from("user_progress").delete().eq("user_id", user_id).eq("chapter_id", data.id);
+  const { error } = await supabase.from("chapters").delete().eq("id", data.id).eq("user_id", user_id);
   if (error) throw error;
   return { id: data.id };
 };
@@ -131,13 +132,15 @@ export const createGoal = async ({ data }: { data: { title: string; dueDate?: st
 };
 
 export const setGoalDone = async ({ data }: { data: { id: string; done: boolean } }) => {
-  const { error } = await supabase.from("goals").update({ is_done: data.done }).eq("id", data.id);
+  const user_id = await uid();
+  const { error } = await supabase.from("goals").update({ is_done: data.done }).eq("id", data.id).eq("user_id", user_id);
   if (error) throw error;
   return data;
 };
 
 export const deleteGoal = async ({ data }: { data: { id: string } }) => {
-  const { error } = await supabase.from("goals").delete().eq("id", data.id);
+  const user_id = await uid();
+  const { error } = await supabase.from("goals").delete().eq("id", data.id).eq("user_id", user_id);
   if (error) throw error;
   return { id: data.id };
 };
