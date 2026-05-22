@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { directSupabase as supabase } from "@/lib/direct-supabase";
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
