@@ -13,11 +13,11 @@ export const getNotes = async () => {
   const user_id = await uid();
   const { data, error } = await supabase
     .from("notes")
-    .select("id, title, body, created_at")
+    .select("id, user_id, title, body, created_at")
     .eq("user_id", user_id)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []).map((n: any) => ({ id: n.id, title: n.title, body: n.body, date: fmtDate(n.created_at) }));
+  return (data ?? []).filter((n: any) => n.user_id === user_id).map((n: any) => ({ id: n.id, title: n.title, body: n.body, date: fmtDate(n.created_at) }));
 };
 
 export const createNote = async ({ data }: { data: { title: string; body: string } }) => {
