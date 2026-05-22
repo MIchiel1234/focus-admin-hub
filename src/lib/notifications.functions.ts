@@ -15,10 +15,11 @@ export interface Notification {
 }
 
 export const getNotifications = async (): Promise<Notification[]> => {
-  await uid();
+  const user_id = await uid();
   const { data, error } = await supabase
     .from("notifications")
     .select("id, title, message, is_read, created_at")
+    .eq("user_id", user_id)
     .order("created_at", { ascending: false })
     .limit(50);
   if (error) throw error;
@@ -37,10 +38,12 @@ export const createNotification = async (input: { title: string; message?: strin
 };
 
 export const markNotificationRead = async (id: string) => {
+  const user_id = await uid();
   const { error } = await supabase
     .from("notifications")
     .update({ is_read: true })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("user_id", user_id);
   if (error) throw error;
 };
 
@@ -55,6 +58,7 @@ export const markAllNotificationsRead = async () => {
 };
 
 export const deleteNotification = async (id: string) => {
-  const { error } = await supabase.from("notifications").delete().eq("id", id);
+  const user_id = await uid();
+  const { error } = await supabase.from("notifications").delete().eq("id", id).eq("user_id", user_id);
   if (error) throw error;
 };
