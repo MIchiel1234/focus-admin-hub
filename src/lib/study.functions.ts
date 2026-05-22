@@ -34,7 +34,7 @@ export const getStudyData = async () => {
   return {
     subjects: (subjects ?? []).filter((s: any) => s.user_id === userId).map((s: any) => ({ id: s.id, code: s.code, name: s.title })),
     modules: (chapters ?? []).filter((c: any) => c.user_id === userId).map((c: any) => {
-      const p = progress?.find((x: any) => x.chapter_id === c.id);
+      const p = progress?.find((x: any) => x.user_id === userId && x.chapter_id === c.id);
       return {
         id: c.id,
         subjectId: c.module_id,
