@@ -22,7 +22,10 @@ export function NotificationsPopover() {
   const [adding, setAdding] = useState(false);
 
   const load = async () => {
-    if (!user) return;
+    if (!user) {
+      setItems([]);
+      return;
+    }
     setLoading(true);
     try {
       setItems(await getNotifications());
@@ -34,6 +37,7 @@ export function NotificationsPopover() {
   };
 
   useEffect(() => {
+    setItems([]);
     load();
   }, [user?.id]);
 

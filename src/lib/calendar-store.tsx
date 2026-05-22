@@ -26,11 +26,19 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
 
   useEffect(() => {
-    if (loading || !user) return;
+    if (loading) return;
+    let cancelled = false;
+    setEvents([]);
+    if (!user) return;
     getCalendarEvents()
-      .then(setEvents)
+      .then((nextEvents) => {
+        if (!cancelled) setEvents(nextEvents);
+      })
       .catch((err) => console.error("[calendar] load failed", err));
-  }, [loading, user]);
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, user?.id]);
 
   const addEvent: Ctx["addEvent"] = async (e) => {
     try {

@@ -15,21 +15,24 @@ interface Note {
 
 export function VibrantNotes() {
   const { user, loading } = useAuth();
-  const [notes, setNotes] = useState<Note[]>([
-    {
-      id: "1",
-      title: "Week 12 — Tax revision",
-      body: "Wrapped Chapter 5 problem set. Felt strong on capital gains rules.",
-      date: "Mon, May 12",
-    },
-  ]);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
 
   useEffect(() => {
-    if (loading || !user) return;
-    getNotes().then(setNotes).catch(() => {});
-  }, [loading, user]);
+    if (loading) return;
+    let cancelled = false;
+    setNotes([]);
+    if (!user) return;
+    getNotes()
+      .then((nextNotes) => {
+        if (!cancelled) setNotes(nextNotes);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, user?.id]);
 
   const addNote = async () => {
     if (!title.trim() && !body.trim()) return;

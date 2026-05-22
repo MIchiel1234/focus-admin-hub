@@ -60,6 +60,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     try {
       const raw = localStorage.getItem(KEY);
       if (!user && raw) setState({ ...defaults, ...JSON.parse(raw) });
+      if (user) setState(defaults);
     } catch {}
   }, [loadingAuth, user]);
 
@@ -70,12 +71,21 @@ export function StudyProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (loadingAuth || !user) return;
+    let cancelled = false;
+    setState(defaults);
     setLoadingStudy(true);
     getStudyData()
-      .then((data) => setState({ subjects: data.subjects, modules: data.modules, goals: data.goals }))
+      .then((data) => {
+        if (!cancelled) setState({ subjects: data.subjects, modules: data.modules, goals: data.goals });
+      })
       .catch(() => {})
-      .finally(() => setLoadingStudy(false));
-  }, [loadingAuth, user]);
+      .finally(() => {
+        if (!cancelled) setLoadingStudy(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadingAuth, user?.id]);
 
   const ctx: Ctx = {
     ...state,
