@@ -1,4 +1,4 @@
-import { directSupabase } from "@/lib/direct-supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 const chapterNumberFrom = (chapter: string) => {
   const m = chapter.match(/\d+/);
@@ -6,14 +6,14 @@ const chapterNumberFrom = (chapter: string) => {
 };
 
 async function uid() {
-  const { data } = await directSupabase.auth.getUser();
+  const { data } = await supabase.auth.getUser();
   if (!data.user) throw new Error("Not signed in");
   return data.user.id;
 }
 
 export const getStudyData = async () => {
   const userId = await uid();
-  const sb = directSupabase;
+  const sb = supabase;
 
   let { data: subjects, error: subjectsError } = await sb
     .from("modules")
@@ -74,7 +74,7 @@ export const getStudyData = async () => {
 
 export const createSubject = async ({ data }: { data: { code: string; name: string } }) => {
   const user_id = await uid();
-  const { data: s, error } = await directSupabase
+  const { data: s, error } = await supabase
     .from("modules")
     .insert({ user_id, code: data.code, title: data.name })
     .select("id, code, title")
@@ -85,7 +85,7 @@ export const createSubject = async ({ data }: { data: { code: string; name: stri
 
 export const createChapter = async ({ data }: { data: { subjectId: string; chapter: string; title: string; description?: string; progress?: number } }) => {
   const user_id = await uid();
-  const { data: c, error } = await directSupabase
+  const { data: c, error } = await supabase
     .from("chapters")
     .insert({ user_id, module_id: data.subjectId, chapter_number: chapterNumberFrom(data.chapter), title: data.title, description: data.description ?? "" })
     .select("id, module_id, chapter_number, title, description")
@@ -96,7 +96,7 @@ export const createChapter = async ({ data }: { data: { subjectId: string; chapt
 
 export const updateChapterProgress = async ({ data }: { data: { id: string; done?: boolean; progress?: number } }) => {
   const user_id = await uid();
-  const sb = directSupabase;
+  const sb = supabase;
   const percent = data.done ? 100 : data.progress ?? 0;
   const { data: existing, error: selErr } = await sb.from("user_progress").select("id").eq("chapter_id", data.id).limit(1);
   if (selErr) throw selErr;
@@ -112,15 +112,15 @@ export const updateChapterProgress = async ({ data }: { data: { id: string; done
 };
 
 export const deleteChapter = async ({ data }: { data: { id: string } }) => {
-  await directSupabase.from("user_progress").delete().eq("chapter_id", data.id);
-  const { error } = await directSupabase.from("chapters").delete().eq("id", data.id);
+  await supabase.from("user_progress").delete().eq("chapter_id", data.id);
+  const { error } = await supabase.from("chapters").delete().eq("id", data.id);
   if (error) throw error;
   return { id: data.id };
 };
 
 export const createGoal = async ({ data }: { data: { title: string; dueDate?: string } }) => {
   const user_id = await uid();
-  const { data: g, error } = await directSupabase
+  const { data: g, error } = await supabase
     .from("goals")
     .insert({ user_id, title: data.title, due_date: data.dueDate ?? null })
     .select("id, title, due_date, is_done, created_at")
@@ -130,13 +130,13 @@ export const createGoal = async ({ data }: { data: { title: string; dueDate?: st
 };
 
 export const setGoalDone = async ({ data }: { data: { id: string; done: boolean } }) => {
-  const { error } = await directSupabase.from("goals").update({ is_done: data.done }).eq("id", data.id);
+  const { error } = await supabase.from("goals").update({ is_done: data.done }).eq("id", data.id);
   if (error) throw error;
   return data;
 };
 
 export const deleteGoal = async ({ data }: { data: { id: string } }) => {
-  const { error } = await directSupabase.from("goals").delete().eq("id", data.id);
+  const { error } = await supabase.from("goals").delete().eq("id", data.id);
   if (error) throw error;
   return { id: data.id };
 };

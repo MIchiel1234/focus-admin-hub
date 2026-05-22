@@ -1,7 +1,7 @@
-import { directSupabase } from "@/lib/direct-supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 async function uid() {
-  const { data } = await directSupabase.auth.getUser();
+  const { data } = await supabase.auth.getUser();
   if (!data.user) throw new Error("Not signed in");
   return data.user.id;
 }
@@ -16,7 +16,7 @@ export interface Notification {
 
 export const getNotifications = async (): Promise<Notification[]> => {
   await uid();
-  const { data, error } = await directSupabase
+  const { data, error } = await supabase
     .from("notifications")
     .select("id, title, message, is_read, created_at")
     .order("created_at", { ascending: false })
@@ -27,7 +27,7 @@ export const getNotifications = async (): Promise<Notification[]> => {
 
 export const createNotification = async (input: { title: string; message?: string }) => {
   const user_id = await uid();
-  const { data, error } = await directSupabase
+  const { data, error } = await supabase
     .from("notifications")
     .insert({ user_id, title: input.title, message: input.message ?? "" })
     .select("id, title, message, is_read, created_at")
@@ -37,7 +37,7 @@ export const createNotification = async (input: { title: string; message?: strin
 };
 
 export const markNotificationRead = async (id: string) => {
-  const { error } = await directSupabase
+  const { error } = await supabase
     .from("notifications")
     .update({ is_read: true })
     .eq("id", id);
@@ -46,7 +46,7 @@ export const markNotificationRead = async (id: string) => {
 
 export const markAllNotificationsRead = async () => {
   const user_id = await uid();
-  const { error } = await directSupabase
+  const { error } = await supabase
     .from("notifications")
     .update({ is_read: true })
     .eq("user_id", user_id)
@@ -55,6 +55,6 @@ export const markAllNotificationsRead = async () => {
 };
 
 export const deleteNotification = async (id: string) => {
-  const { error } = await directSupabase.from("notifications").delete().eq("id", id);
+  const { error } = await supabase.from("notifications").delete().eq("id", id);
   if (error) throw error;
 };

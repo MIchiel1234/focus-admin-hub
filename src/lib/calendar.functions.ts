@@ -1,16 +1,16 @@
-import { directSupabase } from "@/lib/direct-supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 type Color = "vibrant" | "accent" | "muted";
 
 async function uid() {
-  const { data } = await directSupabase.auth.getUser();
+  const { data } = await supabase.auth.getUser();
   if (!data.user) throw new Error("Not signed in");
   return data.user.id;
 }
 
 export const getCalendarEvents = async () => {
   await uid();
-  const { data, error } = await directSupabase
+  const { data, error } = await supabase
     .from("calendar_events")
     .select("id, event_date, title, color")
     .order("event_date");
@@ -20,7 +20,7 @@ export const getCalendarEvents = async () => {
 
 export const createCalendarEvent = async ({ data }: { data: { date: string; title: string; color?: Color } }) => {
   const user_id = await uid();
-  const { data: event, error } = await directSupabase
+  const { data: event, error } = await supabase
     .from("calendar_events")
     .insert({ user_id, event_date: data.date, title: data.title, color: data.color ?? "vibrant" })
     .select("id, event_date, title, color")
@@ -30,7 +30,7 @@ export const createCalendarEvent = async ({ data }: { data: { date: string; titl
 };
 
 export const deleteCalendarEvent = async ({ data }: { data: { id: string } }) => {
-  const { error } = await directSupabase.from("calendar_events").delete().eq("id", data.id);
+  const { error } = await supabase.from("calendar_events").delete().eq("id", data.id);
   if (error) throw error;
   return { id: data.id };
 };

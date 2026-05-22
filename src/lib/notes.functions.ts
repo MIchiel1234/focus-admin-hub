@@ -1,17 +1,17 @@
-import { directSupabase } from "@/lib/direct-supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
 async function uid() {
-  const { data } = await directSupabase.auth.getUser();
+  const { data } = await supabase.auth.getUser();
   if (!data.user) throw new Error("Not signed in");
   return data.user.id;
 }
 
 export const getNotes = async () => {
   await uid();
-  const { data, error } = await directSupabase
+  const { data, error } = await supabase
     .from("notes")
     .select("id, title, body, created_at")
     .order("created_at", { ascending: false });
@@ -21,7 +21,7 @@ export const getNotes = async () => {
 
 export const createNote = async ({ data }: { data: { title: string; body: string } }) => {
   const user_id = await uid();
-  const { data: note, error } = await directSupabase
+  const { data: note, error } = await supabase
     .from("notes")
     .insert({ user_id, title: data.title, body: data.body })
     .select("id, title, body, created_at")
@@ -31,7 +31,7 @@ export const createNote = async ({ data }: { data: { title: string; body: string
 };
 
 export const deleteNote = async ({ data }: { data: { id: string } }) => {
-  const { error } = await directSupabase.from("notes").delete().eq("id", data.id);
+  const { error } = await supabase.from("notes").delete().eq("id", data.id);
   if (error) throw error;
   return { id: data.id };
 };
