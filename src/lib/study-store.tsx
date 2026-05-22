@@ -42,7 +42,6 @@ interface Ctx {
 }
 
 const StudyCtx = createContext<Ctx | null>(null);
-const KEY = "admin.study.v1";
 
 const defaults = {
   subjects: [] as Subject[],
@@ -57,17 +56,8 @@ export function StudyProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (loadingAuth) return;
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (!user && raw) setState({ ...defaults, ...JSON.parse(raw) });
-      if (user) setState(defaults);
-    } catch {}
-  }, [loadingAuth, user]);
-
-  useEffect(() => {
-    if (loadingAuth || user) return;
-    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
-  }, [loadingAuth, state, user]);
+    setState(defaults);
+  }, [loadingAuth, user?.id]);
 
   useEffect(() => {
     if (loadingAuth || !user) return;
