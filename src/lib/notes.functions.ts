@@ -87,7 +87,7 @@ export const deleteNote = async ({ data }: { data: { id: string } }) => {
 
 export const uploadNoteFile = async (file: File): Promise<NoteAttachment> => {
   const user_id = await uid();
-  const path = `${user_id}/${crypto.randomUUID()}-${file.name}`;
+  const path = `${user_id}/${randomId()}-${file.name}`;
   const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
     contentType: file.type || "application/octet-stream",
     upsert: false,
