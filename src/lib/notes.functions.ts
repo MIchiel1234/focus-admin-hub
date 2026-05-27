@@ -18,6 +18,17 @@ async function uid() {
   return data.user.id;
 }
 
+function randomId() {
+  const c: any = typeof crypto !== "undefined" ? crypto : undefined;
+  if (c?.randomUUID) return c.randomUUID();
+  if (c?.getRandomValues) {
+    const b = new Uint8Array(16);
+    c.getRandomValues(b);
+    return Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 export const getNotes = async () => {
   const user_id = await uid();
   const { data, error } = await supabase
