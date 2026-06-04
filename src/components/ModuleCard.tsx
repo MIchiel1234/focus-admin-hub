@@ -1,6 +1,15 @@
-import { Lock, FileText, CheckCircle2, Sparkles, ArrowRight } from "lucide-react";
+import { useRef, useState } from "react";
+import { Lock, FileText, CheckCircle2, Sparkles, ArrowRight, Paperclip, Download, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { getChapterFileUrl, type ChapterAttachment } from "@/lib/study.functions";
 
 export interface Module {
   id: string;
@@ -12,15 +21,50 @@ export interface Module {
   locked: boolean;
   done?: boolean;
   unlockHint?: string;
+  attachments?: ChapterAttachment[];
 }
 
 interface Props {
   module: Module;
   onComplete?: (id: string) => void;
+  onUploadFile?: (id: string, file: File) => Promise<void>;
+  onRemoveFile?: (id: string, path: string) => Promise<void>;
 }
 
-export function ModuleCard({ module, onComplete }: Props) {
+const fmtSize = (n: number) =>
+  n < 1024 ? `${n} B` : n < 1024 * 1024 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`;
+
+export function ModuleCard({ module, onComplete, onUploadFile, onRemoveFile }: Props) {
   const { locked, done } = module;
+  const [open, setOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const attachments = module.attachments ?? [];
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || !onUploadFile) return;
+    setUploading(true);
+    try {
+      for (const f of Array.from(files)) {
+        await onUploadFile(module.id, f);
+      }
+    } catch (e: any) {
+      alert("Upload failed: " + (e?.message ?? e));
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const openAttachment = async (path: string) => {
+    try {
+      const url = await getChapterFileUrl(path);
+      window.open(url, "_blank");
+    } catch (e: any) {
+      alert("Could not open file: " + (e?.message ?? e));
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -53,11 +97,18 @@ export function ModuleCard({ module, onComplete }: Props) {
             </h3>
           </div>
         </div>
-        {done && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-vibrant/10 px-2.5 py-1 text-xs font-medium text-vibrant">
-            <CheckCircle2 className="h-3 w-3" /> Done
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {attachments.length > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-vibrant/10 px-2 py-0.5 text-[11px] font-medium text-vibrant">
+              <Paperclip className="h-3 w-3" /> {attachments.length}
+            </span>
+          )}
+          {done && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-vibrant/10 px-2.5 py-1 text-xs font-medium text-vibrant">
+              <CheckCircle2 className="h-3 w-3" /> Done
+            </span>
+          )}
+        </div>
       </div>
 
       <h4 className={cn("relative mt-4 text-base font-medium", locked && "text-locked-foreground")}>
@@ -86,6 +137,7 @@ export function ModuleCard({ module, onComplete }: Props) {
         <Button
           disabled={locked}
           variant={locked ? "secondary" : "default"}
+          onClick={() => !locked && setOpen(true)}
           className={cn(
             "flex-1",
             !locked && "bg-vibrant text-primary-foreground hover:opacity-90 border-0 shadow-vibrant"
@@ -100,6 +152,71 @@ export function ModuleCard({ module, onComplete }: Props) {
           </Button>
         )}
       </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{module.chapter} — {module.title}</DialogTitle>
+            <DialogDescription>Attach files or links for this chapter. Only you can see them.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            {attachments.length === 0 ? (
+              <p className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+                No files yet. Upload your first one below.
+              </p>
+            ) : (
+              <ul className="space-y-1">
+                {attachments.map((a) => (
+                  <li
+                    key={a.path}
+                    className="flex items-center justify-between gap-2 rounded-md border border-border bg-background/60 px-2 py-1.5 text-sm"
+                  >
+                    <button
+                      onClick={() => openAttachment(a.path)}
+                      className="inline-flex min-w-0 flex-1 items-center gap-2 truncate text-left hover:text-vibrant"
+                    >
+                      <Download className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{a.name}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">({fmtSize(a.size)})</span>
+                    </button>
+                    {onRemoveFile && (
+                      <button
+                        onClick={() => onRemoveFile(module.id, a.path)}
+                        className="text-muted-foreground hover:text-destructive"
+                        title="Remove file"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <input
+              ref={fileRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => handleFiles(e.target.files)}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                <X className="mr-1 h-4 w-4" /> Close
+              </Button>
+              <Button
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading || !onUploadFile}
+                className="bg-vibrant text-primary-foreground border-0 shadow-vibrant hover:opacity-90"
+              >
+                <Paperclip className="mr-1 h-4 w-4" />
+                {uploading ? "Uploading…" : "Attach files"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
