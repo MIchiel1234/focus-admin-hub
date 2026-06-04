@@ -1,28 +1,41 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-store";
-import { createChapter, createGoal, createSubject, deleteChapter, deleteGoal, getStudyData, setGoalDone, updateChapterProgress } from "@/lib/study.functions";
+import {
+  createChapter,
+  createGoal,
+  createSubject,
+  deleteChapter,
+  deleteGoal,
+  getStudyData,
+  setGoalDone,
+  updateChapterProgress,
+  uploadChapterFile,
+  removeChapterFile,
+  type ChapterAttachment,
+} from "@/lib/study.functions";
 
 export interface Subject {
   id: string;
-  code: string; // e.g. "TAX3761"
-  name: string; // e.g. "Taxation of Business Activities"
+  code: string;
+  name: string;
 }
 
 export interface StudyModule {
   id: string;
   subjectId: string;
-  chapter: string; // e.g. "Chapter 7"
+  chapter: string;
   title: string;
   description?: string;
-  progress: number; // 0-100
+  progress: number;
   done?: boolean;
+  attachments?: ChapterAttachment[];
 }
 
 export interface Goal {
   id: string;
   title: string;
   detail?: string;
-  dueDate?: string; // yyyy-mm-dd
+  dueDate?: string;
   done: boolean;
   createdAt: number;
 }
@@ -36,6 +49,8 @@ interface Ctx {
   addModule: (m: Omit<StudyModule, "id">) => Promise<void>;
   updateModule: (id: string, patch: Partial<StudyModule>) => Promise<void>;
   removeModule: (id: string) => Promise<void>;
+  addModuleFile: (id: string, file: File) => Promise<void>;
+  removeModuleFile: (id: string, path: string) => Promise<void>;
   addGoal: (g: Omit<Goal, "id" | "done" | "createdAt">) => Promise<void>;
   toggleGoal: (id: string) => Promise<void>;
   removeGoal: (id: string) => Promise<void>;
@@ -86,7 +101,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
       return subject;
     },
     addModule: async (m) => {
-      const module = user ? await createChapter({ data: m }) : { ...m, id: crypto.randomUUID() };
+      const module = user ? await createChapter({ data: m }) : { ...m, id: crypto.randomUUID(), attachments: [] };
       setState((p) => ({ ...p, modules: [...p.modules, module] }));
     },
     updateModule: async (id, patch) => {
@@ -98,6 +113,25 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     removeModule: async (id) => {
       setState((p) => ({ ...p, modules: p.modules.filter((m) => m.id !== id) }));
       if (user) await deleteChapter({ data: { id } });
+    },
+    addModuleFile: async (id, file) => {
+      if (!user) throw new Error("Sign in to upload files");
+      const att = await uploadChapterFile({ data: { chapterId: id, file } });
+      setState((p) => ({
+        ...p,
+        modules: p.modules.map((m) =>
+          m.id === id ? { ...m, attachments: [...(m.attachments ?? []), att] } : m,
+        ),
+      }));
+    },
+    removeModuleFile: async (id, path) => {
+      setState((p) => ({
+        ...p,
+        modules: p.modules.map((m) =>
+          m.id === id ? { ...m, attachments: (m.attachments ?? []).filter((a) => a.path !== path) } : m,
+        ),
+      }));
+      if (user) await removeChapterFile({ data: { chapterId: id, path } });
     },
     addGoal: async (g) => {
       const goal = user ? await createGoal({ data: { title: g.title, dueDate: g.dueDate } }) : { ...g, id: crypto.randomUUID(), done: false, createdAt: Date.now() };
