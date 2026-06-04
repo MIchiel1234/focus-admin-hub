@@ -88,7 +88,7 @@ function Admin() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {modules.map((m) => (
-              <ModuleCard key={m.id} module={m} onComplete={handleComplete} />
+              <ModuleCard key={m.id} module={m} onComplete={handleComplete} onUploadFile={addModuleFile} onRemoveFile={removeModuleFile} />
             ))}
           </div>
         )}
