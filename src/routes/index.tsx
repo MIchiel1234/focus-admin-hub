@@ -17,7 +17,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Admin() {
-  const { subjects, modules: studyModules, updateModule } = useStudy();
+  const { subjects, modules: studyModules, updateModule, addModuleFile, removeModuleFile } = useStudy();
 
   // Show only what the user has added. Sequential unlock: each chapter unlocks
   // when the previous one (within the same subject) is done.
@@ -42,6 +42,7 @@ function Admin() {
       locked,
       done: m.done,
       unlockHint: prev ? `Finish ${prev.chapter}` : undefined,
+      attachments: m.attachments,
     };
   });
 
@@ -87,7 +88,7 @@ function Admin() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {modules.map((m) => (
-              <ModuleCard key={m.id} module={m} onComplete={handleComplete} />
+              <ModuleCard key={m.id} module={m} onComplete={handleComplete} onUploadFile={addModuleFile} onRemoveFile={removeModuleFile} />
             ))}
           </div>
         )}
