@@ -46,6 +46,7 @@ export type Database = {
       }
       chapters: {
         Row: {
+          attachments: Json
           chapter_number: number
           created_at: string
           description: string | null
@@ -57,6 +58,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attachments?: Json
           chapter_number: number
           created_at?: string
           description?: string | null
@@ -68,6 +70,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attachments?: Json
           chapter_number?: number
           created_at?: string
           description?: string | null

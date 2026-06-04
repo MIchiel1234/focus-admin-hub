@@ -33,7 +33,7 @@ export const Route = createFileRoute("/modules")({
 const NEW_SUBJECT = "__new__";
 
 function ModulesPage() {
-  const { subjects, modules, addSubject, addModule, updateModule, removeModule } = useStudy();
+  const { subjects, modules, addSubject, addModule, updateModule, removeModule, addModuleFile, removeModuleFile } = useStudy();
   const [openModule, setOpenModule] = useState(false);
 
   // Module form
@@ -192,10 +192,16 @@ function ModulesPage() {
                       progress: m.progress,
                       locked: false,
                       done: m.done,
+                      attachments: m.attachments,
                     };
                     return (
                       <div key={m.id} className="relative group">
-                        <ModuleCard module={card} onComplete={() => updateModule(m.id, { done: true, progress: 100 })} />
+                        <ModuleCard
+                          module={card}
+                          onComplete={() => updateModule(m.id, { done: true, progress: 100 })}
+                          onUploadFile={addModuleFile}
+                          onRemoveFile={removeModuleFile}
+                        />
                         <button
                           onClick={() => removeModule(m.id)}
                           className="absolute right-3 top-3 rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/20 hover:text-destructive group-hover:opacity-100"
