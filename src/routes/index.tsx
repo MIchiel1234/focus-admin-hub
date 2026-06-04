@@ -17,7 +17,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Admin() {
-  const { subjects, modules: studyModules, updateModule } = useStudy();
+  const { subjects, modules: studyModules, updateModule, addModuleFile, removeModuleFile } = useStudy();
 
   // Show only what the user has added. Sequential unlock: each chapter unlocks
   // when the previous one (within the same subject) is done.
