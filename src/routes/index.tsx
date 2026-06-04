@@ -42,6 +42,7 @@ function Admin() {
       locked,
       done: m.done,
       unlockHint: prev ? `Finish ${prev.chapter}` : undefined,
+      attachments: m.attachments,
     };
   });
 
