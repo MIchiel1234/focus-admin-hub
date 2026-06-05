@@ -186,6 +186,7 @@ function ModulesPage() {
                     const card: Module = {
                       id: m.id,
                       code: subject.code,
+                      subjectName: subject.name,
                       chapter: m.chapter,
                       title: m.title,
                       description: m.description ?? "",
