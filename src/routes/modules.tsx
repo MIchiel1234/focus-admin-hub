@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Paperclip, Plus, Trash2 } from "lucide-react";
 import { DashboardShell } from "@/components/DashboardShell";
 import { ModuleCard, type Module } from "@/components/ModuleCard";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,8 @@ function ModulesPage() {
   const [modChapter, setModChapter] = useState("");
   const [modTitle, setModTitle] = useState("");
   const [modDesc, setModDesc] = useState("");
+  const [modFiles, setModFiles] = useState<File[]>([]);
+  const [creating, setCreating] = useState(false);
   // New subject inline fields
   const [subjCode, setSubjCode] = useState("");
   const [subjName, setSubjName] = useState("");
@@ -54,37 +56,51 @@ function ModulesPage() {
 
   const resetForm = () => {
     setModChapter(""); setModTitle(""); setModDesc("");
+    setModFiles([]);
     setSubjCode(""); setSubjName("");
   };
 
   const submitModule = async () => {
     if (!modChapter.trim() || !modTitle.trim()) return;
 
-    let subjectId = modSubject;
-    const creatingNew = modSubject === NEW_SUBJECT || subjects.length === 0;
+    setCreating(true);
 
-    if (creatingNew) {
-      if (!subjCode.trim() || !subjName.trim()) {
-        toast.error("Please enter subject code and name");
-        return;
+    try {
+      let subjectId = modSubject;
+      const creatingNew = modSubject === NEW_SUBJECT || subjects.length === 0;
+
+      if (creatingNew) {
+        if (!subjCode.trim() || !subjName.trim()) {
+          toast.error("Please enter subject code and name");
+          return;
+        }
+        const s = await addSubject({
+          code: subjCode.trim().toUpperCase().slice(0, 20),
+          name: subjName.trim().slice(0, 100),
+        });
+        subjectId = s.id;
       }
-      const s = await addSubject({
-        code: subjCode.trim().toUpperCase().slice(0, 20),
-        name: subjName.trim().slice(0, 100),
-      });
-      subjectId = s.id;
-    }
 
-    await addModule({
-      subjectId,
-      chapter: modChapter.trim().slice(0, 50),
-      title: modTitle.trim().slice(0, 100),
-      description: modDesc.trim().slice(0, 300),
-      progress: 0,
-    });
-    resetForm();
-    setOpenModule(false);
-    toast.success("Module added");
+      const module = await addModule({
+        subjectId,
+        chapter: modChapter.trim().slice(0, 50),
+        title: modTitle.trim().slice(0, 100),
+        description: modDesc.trim().slice(0, 300),
+        progress: 0,
+      });
+
+      for (const file of modFiles) {
+        await addModuleFile(module.id, file);
+      }
+
+      resetForm();
+      setOpenModule(false);
+      toast.success(modFiles.length ? "Module and files added" : "Module added");
+    } catch (error: any) {
+      toast.error(error?.message ?? "Could not add module");
+    } finally {
+      setCreating(false);
+    }
   };
 
   const showNewSubjectFields = modSubject === NEW_SUBJECT || subjects.length === 0;
@@ -154,9 +170,20 @@ function ModulesPage() {
                 <Label htmlFor="m-desc">Description</Label>
                 <Input id="m-desc" value={modDesc} onChange={(e) => setModDesc(e.target.value)} placeholder="Short summary" maxLength={300} />
               </div>
+              <div>
+                <Label htmlFor="m-files">Files</Label>
+                <Input id="m-files" type="file" multiple onChange={(e) => setModFiles(Array.from(e.target.files ?? []))} />
+                {modFiles.length > 0 && (
+                  <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                    <Paperclip className="h-3 w-3" /> {modFiles.length} file{modFiles.length === 1 ? "" : "s"} ready to attach
+                  </p>
+                )}
+              </div>
             </div>
             <DialogFooter>
-              <Button onClick={submitModule} className="bg-vibrant text-primary-foreground border-0">Add module</Button>
+              <Button disabled={creating} onClick={submitModule} className="bg-vibrant text-primary-foreground border-0">
+                {creating ? "Adding…" : "Add module"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
