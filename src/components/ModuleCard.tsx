@@ -14,6 +14,7 @@ import { getChapterFileUrl, type ChapterAttachment } from "@/lib/study.functions
 export interface Module {
   id: string;
   code: string;
+  subjectName?: string;
   chapter: string;
   title: string;
   description: string;
