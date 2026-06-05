@@ -1,4 +1,4 @@
-import { directSupabase as supabase } from "@/lib/direct-supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 type Color = "vibrant" | "accent" | "muted";
 

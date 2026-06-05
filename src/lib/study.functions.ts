@@ -1,4 +1,4 @@
-import { directSupabase as supabase } from "@/lib/direct-supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 const BUCKET = "chapter-files";
 
@@ -8,6 +8,9 @@ export interface ChapterAttachment {
   size: number;
   type: string;
 }
+
+const asAttachments = (value: unknown): ChapterAttachment[] =>
+  Array.isArray(value) ? (value as ChapterAttachment[]) : [];
 
 const chapterNumberFrom = (chapter: string) => {
   const m = chapter.match(/\d+/);
@@ -63,7 +66,7 @@ export const getStudyData = async () => {
         description: c.description ?? "",
         progress: p?.is_completed ? 100 : p?.current_progress_percent ?? 0,
         done: p?.is_completed ?? false,
-        attachments: (c.attachments ?? []) as ChapterAttachment[],
+        attachments: asAttachments(c.attachments),
       };
     }),
     goals: (goals ?? []).filter((g: any) => g.user_id === userId).map((g: any) => ({ id: g.id, title: g.title, dueDate: g.due_date ?? undefined, done: g.is_done, createdAt: new Date(g.created_at).getTime() })),
@@ -89,7 +92,7 @@ export const createChapter = async ({ data }: { data: { subjectId: string; chapt
     .select("id, module_id, chapter_number, title, description, attachments")
     .single();
   if (error) throw error;
-  return { id: c.id, subjectId: c.module_id, chapter: `Chapter ${c.chapter_number}`, title: c.title, description: c.description ?? "", progress: data.progress ?? 0, done: false, attachments: (c.attachments ?? []) as ChapterAttachment[] };
+  return { id: c.id, subjectId: c.module_id, chapter: `Chapter ${c.chapter_number}`, title: c.title, description: c.description ?? "", progress: data.progress ?? 0, done: false, attachments: asAttachments(c.attachments) };
 };
 
 export const updateChapterProgress = async ({ data }: { data: { id: string; done?: boolean; progress?: number } }) => {
@@ -117,7 +120,7 @@ export const deleteChapter = async ({ data }: { data: { id: string } }) => {
     .eq("id", data.id)
     .eq("user_id", user_id)
     .single();
-  const paths = ((existing?.attachments ?? []) as ChapterAttachment[]).map((a) => a.path);
+  const paths = asAttachments(existing?.attachments).map((a) => a.path);
   if (paths.length) await supabase.storage.from(BUCKET).remove(paths);
   await supabase.from("user_progress").delete().eq("user_id", user_id).eq("chapter_id", data.id);
   const { error } = await supabase.from("chapters").delete().eq("id", data.id).eq("user_id", user_id);
@@ -143,10 +146,10 @@ export const uploadChapterFile = async ({ data }: { data: { chapterId: string; f
     .eq("user_id", user_id)
     .single();
   if (selErr) throw selErr;
-  const next = [...(((row?.attachments ?? []) as ChapterAttachment[])), attachment];
+  const next = [...asAttachments(row?.attachments), attachment];
   const { error: updErr } = await supabase
     .from("chapters")
-    .update({ attachments: next })
+    .update({ attachments: next as any })
     .eq("id", chapterId)
     .eq("user_id", user_id);
   if (updErr) throw updErr;
@@ -162,10 +165,10 @@ export const removeChapterFile = async ({ data }: { data: { chapterId: string; p
     .eq("id", data.chapterId)
     .eq("user_id", user_id)
     .single();
-  const next = ((row?.attachments ?? []) as ChapterAttachment[]).filter((a) => a.path !== data.path);
+  const next = asAttachments(row?.attachments).filter((a) => a.path !== data.path);
   const { error } = await supabase
     .from("chapters")
-    .update({ attachments: next })
+    .update({ attachments: next as any })
     .eq("id", data.chapterId)
     .eq("user_id", user_id);
   if (error) throw error;
