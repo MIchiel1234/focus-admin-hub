@@ -35,6 +35,7 @@ function Admin() {
     return {
       id: m.id,
       code: subject?.code ?? "",
+      subjectName: subject?.name,
       chapter: m.chapter,
       title: m.title,
       description: m.description ?? "",
