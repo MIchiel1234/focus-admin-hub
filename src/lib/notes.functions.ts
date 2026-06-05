@@ -9,6 +9,9 @@ export interface NoteAttachment {
   type: string;
 }
 
+const asAttachments = (value: unknown): NoteAttachment[] =>
+  Array.isArray(value) ? (value as NoteAttachment[]) : [];
+
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
@@ -43,7 +46,7 @@ export const getNotes = async () => {
       id: n.id,
       title: n.title,
       body: n.body,
-      attachments: (n.attachments ?? []) as NoteAttachment[],
+      attachments: asAttachments(n.attachments),
       date: fmtDate(n.created_at),
     }));
 };
@@ -56,7 +59,7 @@ export const createNote = async ({
   const user_id = await uid();
   const { data: note, error } = await supabase
     .from("notes")
-    .insert({ user_id, title: data.title, body: data.body, attachments: data.attachments ?? [] })
+    .insert({ user_id, title: data.title, body: data.body, attachments: (data.attachments ?? []) as any })
     .select("id, title, body, attachments, created_at")
     .single();
   if (error) throw error;
@@ -64,7 +67,7 @@ export const createNote = async ({
     id: note.id,
     title: note.title,
     body: note.body,
-    attachments: (note.attachments ?? []) as NoteAttachment[],
+    attachments: asAttachments(note.attachments),
     date: fmtDate(note.created_at),
   };
 };
@@ -78,7 +81,7 @@ export const deleteNote = async ({ data }: { data: { id: string } }) => {
     .eq("id", data.id)
     .eq("user_id", user_id)
     .single();
-  const paths = ((existing?.attachments ?? []) as NoteAttachment[]).map((a) => a.path);
+  const paths = asAttachments(existing?.attachments).map((a) => a.path);
   if (paths.length) await supabase.storage.from(BUCKET).remove(paths);
   const { error } = await supabase.from("notes").delete().eq("id", data.id).eq("user_id", user_id);
   if (error) throw error;
