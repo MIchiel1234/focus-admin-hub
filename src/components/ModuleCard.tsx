@@ -134,6 +134,13 @@ export function ModuleCard({ module, onComplete, onUploadFile, onRemoveFile }: P
       </div>
 
       <div className="relative mt-5 flex items-center gap-2">
+        <input
+          ref={fileRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => handleFiles(e.target.files)}
+        />
         <Button
           disabled={locked}
           variant={locked ? "secondary" : "default"}
@@ -146,6 +153,17 @@ export function ModuleCard({ module, onComplete, onUploadFile, onRemoveFile }: P
           <FileText className="mr-2 h-4 w-4" />
           {locked ? `Locked: ${module.unlockHint ?? "Complete previous"}` : "File Links"}
         </Button>
+        {!locked && onUploadFile && (
+          <Button
+            variant="outline"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            title="Attach files"
+          >
+            <Paperclip className="mr-2 h-4 w-4" />
+            {uploading ? "Uploading…" : "Attach files"}
+          </Button>
+        )}
         {!locked && !done && onComplete && (
           <Button variant="outline" size="icon" onClick={() => onComplete(module.id)} title="Mark complete">
             <ArrowRight className="h-4 w-4" />
@@ -193,14 +211,6 @@ export function ModuleCard({ module, onComplete, onUploadFile, onRemoveFile }: P
                 ))}
               </ul>
             )}
-
-            <input
-              ref={fileRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={(e) => handleFiles(e.target.files)}
-            />
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setOpen(false)}>
                 <X className="mr-1 h-4 w-4" /> Close
