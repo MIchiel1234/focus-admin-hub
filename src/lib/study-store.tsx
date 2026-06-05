@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-store";
+import { directSupabase } from "@/lib/direct-supabase";
 import {
   createChapter,
   createGoal,
