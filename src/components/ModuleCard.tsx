@@ -14,6 +14,7 @@ import { getChapterFileUrl, type ChapterAttachment } from "@/lib/study.functions
 export interface Module {
   id: string;
   code: string;
+  subjectName?: string;
   chapter: string;
   title: string;
   description: string;
@@ -90,7 +91,7 @@ export function ModuleCard({ module, onComplete, onUploadFile, onRemoveFile }: P
           </div>
           <div>
             <p className={cn("text-xs font-medium uppercase tracking-wider", locked ? "text-locked-foreground" : "text-muted-foreground")}>
-              {module.code}
+              {module.code}{module.subjectName ? <span className="ml-1 normal-case tracking-normal text-foreground/70">· {module.subjectName}</span> : null}
             </p>
             <h3 className={cn("text-lg font-semibold", locked && "text-locked-foreground")}>
               {module.chapter}
