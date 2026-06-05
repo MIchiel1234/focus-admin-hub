@@ -7,6 +7,7 @@ export interface ChapterAttachment {
   name: string;
   size: number;
   type: string;
+  dataUrl?: string;
 }
 
 const asAttachments = (value: unknown): ChapterAttachment[] =>
@@ -27,6 +28,19 @@ function randomId() {
   }
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
+
+const isInlineFile = (path: string) => path.startsWith("inline:") || path.startsWith("data:");
+
+const isMissingBucket = (error: unknown) =>
+  /bucket not found/i.test(String((error as { message?: string })?.message ?? error));
+
+const fileToDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error("Could not read file"));
+    reader.readAsDataURL(file);
+  });
 
 async function uid() {
   const { data } = await supabase.auth.getUser();
@@ -120,7 +134,7 @@ export const deleteChapter = async ({ data }: { data: { id: string } }) => {
     .eq("id", data.id)
     .eq("user_id", user_id)
     .single();
-  const paths = asAttachments(existing?.attachments).map((a) => a.path);
+  const paths = asAttachments(existing?.attachments).filter((a) => !a.dataUrl && !isInlineFile(a.path)).map((a) => a.path);
   if (paths.length) await supabase.storage.from(BUCKET).remove(paths);
   await supabase.from("user_progress").delete().eq("user_id", user_id).eq("chapter_id", data.id);
   const { error } = await supabase.from("chapters").delete().eq("id", data.id).eq("user_id", user_id);
@@ -131,13 +145,16 @@ export const deleteChapter = async ({ data }: { data: { id: string } }) => {
 export const uploadChapterFile = async ({ data }: { data: { chapterId: string; file: File } }): Promise<ChapterAttachment> => {
   const user_id = await uid();
   const { file, chapterId } = data;
+  const fileType = file.type || "application/octet-stream";
   const path = `${user_id}/${chapterId}/${randomId()}-${file.name}`;
   const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, {
-    contentType: file.type || "application/octet-stream",
+    contentType: fileType,
     upsert: false,
   });
-  if (upErr) throw upErr;
-  const attachment: ChapterAttachment = { path, name: file.name, size: file.size, type: file.type };
+  if (upErr && !isMissingBucket(upErr)) throw upErr;
+  const attachment: ChapterAttachment = upErr
+    ? { path: `inline:${path}`, name: file.name, size: file.size, type: fileType, dataUrl: await fileToDataUrl(file) }
+    : { path, name: file.name, size: file.size, type: fileType };
   // append to chapter row
   const { data: row, error: selErr } = await supabase
     .from("chapters")
@@ -158,7 +175,7 @@ export const uploadChapterFile = async ({ data }: { data: { chapterId: string; f
 
 export const removeChapterFile = async ({ data }: { data: { chapterId: string; path: string } }) => {
   const user_id = await uid();
-  await supabase.storage.from(BUCKET).remove([data.path]);
+  if (!isInlineFile(data.path)) await supabase.storage.from(BUCKET).remove([data.path]);
   const { data: row } = await supabase
     .from("chapters")
     .select("attachments")
@@ -175,7 +192,11 @@ export const removeChapterFile = async ({ data }: { data: { chapterId: string; p
   return { path: data.path };
 };
 
-export const getChapterFileUrl = async (path: string): Promise<string> => {
+export const getChapterFileUrl = async (attachment: string | ChapterAttachment): Promise<string> => {
+  const path = typeof attachment === "string" ? attachment : attachment.path;
+  if (typeof attachment !== "string" && attachment.dataUrl) return attachment.dataUrl;
+  if (path.startsWith("data:")) return path;
+  if (isInlineFile(path)) throw new Error("This saved file is missing its data. Please upload it again.");
   const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 60 * 60);
   if (error) throw error;
   return data.signedUrl;
