@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-store";
+import { directSupabase } from "@/lib/direct-supabase";
 import {
   createChapter,
   createGoal,
@@ -68,29 +69,47 @@ export function StudyProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState(defaults);
   const [loadingStudy, setLoadingStudy] = useState(false);
   const { user, loading: loadingAuth } = useAuth();
+  const userId = user?.id ?? null;
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Refetch whenever Supabase auth state changes (covers logout/login as same user)
+  useEffect(() => {
+    const { data: { subscription } } = directSupabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED" || event === "TOKEN_REFRESHED") {
+        setReloadKey((k) => k + 1);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (loadingAuth) return;
-    setState(defaults);
-  }, [loadingAuth, user?.id]);
-
-  useEffect(() => {
-    if (loadingAuth || !user) return;
     let cancelled = false;
-    setState(defaults);
+
+    if (!userId) {
+      setState(defaults);
+      setLoadingStudy(false);
+      return;
+    }
+
     setLoadingStudy(true);
-    getStudyData()
-      .then((data) => {
-        if (!cancelled) setState({ subjects: data.subjects, modules: data.modules, goals: data.goals });
-      })
-      .catch(() => {})
-      .finally(() => {
+    (async () => {
+      try {
+        const data = await getStudyData();
+        if (!cancelled) {
+          setState({ subjects: data.subjects, modules: data.modules, goals: data.goals });
+        }
+      } catch (err) {
+        console.error("[study-store] failed to load study data", err);
+      } finally {
         if (!cancelled) setLoadingStudy(false);
-      });
+      }
+    })();
+
     return () => {
       cancelled = true;
     };
-  }, [loadingAuth, user?.id]);
+  }, [loadingAuth, userId, reloadKey]);
 
   const ctx: Ctx = {
     ...state,
