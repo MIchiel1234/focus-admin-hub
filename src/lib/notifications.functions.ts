@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { directSupabase as supabase } from "@/lib/direct-supabase";
 
 async function uid() {
   const { data } = await supabase.auth.getUser();
