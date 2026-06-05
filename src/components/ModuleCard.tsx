@@ -57,9 +57,9 @@ export function ModuleCard({ module, onComplete, onUploadFile, onRemoveFile }: P
     }
   };
 
-  const openAttachment = async (path: string) => {
+  const openAttachment = async (attachment: ChapterAttachment) => {
     try {
-      const url = await getChapterFileUrl(path);
+      const url = await getChapterFileUrl(attachment);
       window.open(url, "_blank");
     } catch (e: any) {
       alert("Could not open file: " + (e?.message ?? e));
@@ -192,7 +192,7 @@ export function ModuleCard({ module, onComplete, onUploadFile, onRemoveFile }: P
                     className="flex items-center justify-between gap-2 rounded-md border border-border bg-background/60 px-2 py-1.5 text-sm"
                   >
                     <button
-                      onClick={() => openAttachment(a.path)}
+                      onClick={() => openAttachment(a)}
                       className="inline-flex min-w-0 flex-1 items-center gap-2 truncate text-left hover:text-vibrant"
                     >
                       <Download className="h-3.5 w-3.5 shrink-0" />
