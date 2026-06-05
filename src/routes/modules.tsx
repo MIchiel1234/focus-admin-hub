@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Paperclip, Plus, Trash2 } from "lucide-react";
 import { DashboardShell } from "@/components/DashboardShell";
 import { ModuleCard, type Module } from "@/components/ModuleCard";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,8 @@ function ModulesPage() {
   const [modChapter, setModChapter] = useState("");
   const [modTitle, setModTitle] = useState("");
   const [modDesc, setModDesc] = useState("");
+  const [modFiles, setModFiles] = useState<File[]>([]);
+  const [creating, setCreating] = useState(false);
   // New subject inline fields
   const [subjCode, setSubjCode] = useState("");
   const [subjName, setSubjName] = useState("");
@@ -54,6 +56,7 @@ function ModulesPage() {
 
   const resetForm = () => {
     setModChapter(""); setModTitle(""); setModDesc("");
+    setModFiles([]);
     setSubjCode(""); setSubjName("");
   };
 

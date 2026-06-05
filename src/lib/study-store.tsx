@@ -47,7 +47,7 @@ interface Ctx {
   goals: Goal[];
   loading: boolean;
   addSubject: (s: Omit<Subject, "id">) => Promise<Subject>;
-  addModule: (m: Omit<StudyModule, "id">) => Promise<void>;
+  addModule: (m: Omit<StudyModule, "id">) => Promise<StudyModule>;
   updateModule: (id: string, patch: Partial<StudyModule>) => Promise<void>;
   removeModule: (id: string) => Promise<void>;
   addModuleFile: (id: string, file: File) => Promise<void>;
@@ -122,6 +122,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     addModule: async (m) => {
       const module = user ? await createChapter({ data: m }) : { ...m, id: crypto.randomUUID(), attachments: [] };
       setState((p) => ({ ...p, modules: [...p.modules, module] }));
+      return module;
     },
     updateModule: async (id, patch) => {
       setState((p) => ({ ...p, modules: p.modules.map((m) => (m.id === id ? { ...m, ...patch } : m)) }));
